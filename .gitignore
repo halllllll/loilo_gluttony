@@ -1,4 +1,5 @@
-idpw/*.csv
+*.csv
+*.log
 tmp/
 sandbox*
 *.xlsx

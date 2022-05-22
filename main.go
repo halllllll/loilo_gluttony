@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"embed"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"loilo/utils"
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	color "github.com/fatih/color"
 	"github.com/spkg/bom"
 	"github.com/xuri/excelize/v2"
 )
@@ -33,6 +35,7 @@ var (
 	classes      = fmt.Sprintf("%s/user_groups", host)
 	studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
 	teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
+	red          = color.New(color.Bold, color.FgHiRed)
 )
 
 func Ua() (ua string) {
@@ -70,7 +73,7 @@ func (loilo *LoiloClient) GetContent(url string) (res *http.Response, err error)
 func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) {
 	res, err := loilo.GetContent(url)
 	if err != nil {
-		log.Fatalln(err)
+		return
 	}
 	defer res.Body.Close()
 
@@ -87,7 +90,6 @@ func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) 
 	doc.Find("tr").Each(func(ri int, tr *goquery.Selection) {
 		row := make([]string, 6)
 		if ri == 0 {
-			// fmt.Printf("this is table Header: %+v\n", tr)
 			tr.Find("th").Each(func(ci int, th *goquery.Selection) {
 				// 最初はなんかチェックボックスが入る
 				if ci != 0 {
@@ -113,7 +115,7 @@ func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) 
 func (loilo *LoiloClient) GetClassMembers(url string) (result [][]string, err error) {
 	res, err := loilo.GetContent(url)
 	if err != nil {
-		log.Fatalln(err)
+		return
 	}
 	defer res.Body.Close()
 
@@ -226,8 +228,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 	for rIdx := 0; rIdx <= len(allClasses); rIdx++ {
 		if rIdx == 0 {
 			if err := sheet.SetRow("A1", header); err != nil {
-				// なにがしかのエラーハンドリング対策を後でやる
-				fmt.Println(err)
+				utils.ErrLog.Println(err)
 			}
 			continue
 		}
@@ -246,8 +247,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 		}
 		cell, _ := excelize.CoordinatesToCellName(1, rIdx)
 		if err = sheet.SetRow(cell, row); err != nil {
-			// なにがしかのエラーハンドリング対策を後でやる
-			fmt.Println(err)
+			utils.ErrLog.Println(err)
 		}
 	}
 
@@ -274,7 +274,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 		_ = classWb.NewSheet(sheetName)
 		sheet, err := classWb.NewStreamWriter(sheetName)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
 		members, err := loilo.GetClassMembers(fmt.Sprintf("%s/%s/memberships", classes, groupId))
 		if err != nil {
@@ -287,7 +287,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 			}
 			cell, _ := excelize.CoordinatesToCellName(1, rowID+1)
 			if err := sheet.SetRow(cell, row); err != nil {
-				fmt.Println(err)
+				utils.ErrLog.Println(err)
 			}
 		}
 		if err := sheet.Flush(); err != nil {
@@ -337,19 +337,36 @@ type SchoolInfo struct {
 //go:embed idpw/*
 var idpw embed.FS
 
+func init() {
+	utils.LoggingSetting("love.log")
+}
+
 func main() {
+
+	/*Script kiddie avoidance (experimental distribution)*/
+	now := time.Now()
+	target := time.Date(2022, 6, 10, 0, 0, 0, 0, time.Local)
+	if !now.Before(target) {
+		utils.ErrLog.Println(red.Sprint("!! EXPIRED !!"))
+		utils.ErrLog.Println(red.Sprint("使用期限が切れました"))
+		utils.ErrLog.Println(red.Sprintf("expired time: %s", target.Format("2006/01/02 15:04:05")))
+		bufio.NewScanner(os.Stdin).Scan()
+		os.Exit(1)
+	}
+	/*End of Script kiddie avoidance (experimental distribution)*/
+
 	// フォルダ名 なんでもいいけど日付にしてる
 	ct := time.Now().Format("2006_01_02")
 	Directory, err = CreateSaveDirectory(ct)
 	if err != nil {
-		// なにかする
+		utils.ErrLog.Println(err)
 	}
-	fmt.Println("save folder: ", Directory)
+	utils.StdLog.Println("save folder: ", Directory)
 
 	// 配布するときは埋め込むけどcsvファイルから読みこむ
 	entries, err := idpw.ReadDir("idpw")
 	if err != nil {
-		log.Fatalln(err)
+		utils.ErrLog.Println(err)
 	}
 	var wg sync.WaitGroup
 
@@ -362,7 +379,7 @@ func main() {
 		}
 		buf, err := idpw.ReadFile(filepath.FromSlash("idpw/" + entry.Name()))
 		if err != nil {
-			log.Fatalln(err)
+			utils.ErrLog.Println(err)
 		}
 		reader := bytes.NewReader(buf)
 		f := csv.NewReader(bom.NewReader(reader))
@@ -376,7 +393,7 @@ func main() {
 			}
 			if err != nil {
 				// なぜかcsvの行を読めず
-				log.Fatalln(err)
+				utils.ErrLog.Println(err)
 			}
 			// 最初はヘッダーとする
 			if idx == 0 {
@@ -390,23 +407,24 @@ func main() {
 				UserId: record[3],
 				UserPw: record[4],
 			}
-			fmt.Println(school.Name)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				err = gig(*school)
 				if err != nil {
-					fmt.Println(err)
+					utils.ErrLog.Println(err)
 				}
 			}()
 			idx++
 		}
 	}
 	wg.Wait()
+	utils.StdLog.Println("FINISH! byebyeﾉｼ")
+	bufio.NewScanner(os.Stdin).Scan()
 }
 
 func gig(school SchoolInfo) (err error) {
-	fmt.Println("let's gig...")
+	utils.StdLog.Printf("let's gig... %s\n", school.Name)
 	schoolDir := filepath.FromSlash(Directory + "/" + school.Name)
 	err = os.Mkdir(schoolDir, os.ModePerm)
 	if err != nil {
