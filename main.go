@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -295,7 +296,6 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 			return err
 		}
 	}
-
 	if err = sheet.Flush(); err != nil {
 		return err
 	}
@@ -353,6 +353,8 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	var wg sync.WaitGroup
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -366,7 +368,9 @@ func main() {
 		}
 		reader := bytes.NewReader(buf)
 		f := csv.NewReader(bom.NewReader(reader))
+
 		idx := 0
+
 		for {
 			record, err := f.Read()
 			if err == io.EOF {
@@ -381,7 +385,6 @@ func main() {
 				idx++
 				continue
 			}
-			// 標準のcsvパッケージに構造体タグが無いけど専用のパッケージを使うのもダルいのでインデックスで決め打ちする
 			school := &SchoolInfo{
 				Area:   record[0],
 				Name:   record[1],
@@ -390,13 +393,18 @@ func main() {
 				UserPw: record[4],
 			}
 			fmt.Println(school.Name)
-			err = gig(*school)
-			if err != nil {
-				fmt.Println(err)
-			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err = gig(*school)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}()
 			idx++
 		}
 	}
+	wg.Wait()
 }
 
 func gig(school SchoolInfo) (err error) {
