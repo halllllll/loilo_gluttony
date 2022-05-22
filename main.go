@@ -21,6 +21,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	color "github.com/fatih/color"
+	"github.com/gen2brain/beeep"
 	"github.com/spkg/bom"
 	"github.com/xuri/excelize/v2"
 )
@@ -36,8 +37,8 @@ var (
 	studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
 	teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
 	red          = color.New(color.Bold, color.BgHiBlack, color.FgHiRed)
-	yellow       = color.New(color.Bold, color.BgHiBlack, color.BgHiYellow)
-	green        = color.New(color.Bold, color.BgHiBlack, color.BgHiGreen)
+	yellow       = color.New(color.Bold, color.BgHiBlack, color.FgHiYellow)
+	green        = color.New(color.Bold, color.BgHiBlack, color.FgHiGreen)
 )
 
 func Ua() (ua string) {
@@ -341,15 +342,29 @@ type SchoolInfo struct {
 	UserPw string
 }
 
+//go:embed notify.png
+var notifyImg embed.FS
+
+type Notify interface {
+	ShowNotify(title, message string)
+}
+type DesktopNotify struct{}
+
+func (d DesktopNotify) ShowNotify(title, message string) {
+	beeep.Notify(title, message, "notify.png")
+}
+
 //go:embed idpw/*
 var idpw embed.FS
 
 func init() {
 	utils.LoggingSetting("love.log")
+	// ほかにもファイルとかは先に読んでおいたほうがいいのではないかという気がする
 }
 
 func main() {
 
+	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	/*Script kiddie avoidance (experimental distribution)*/
 	now := time.Now()
 	target := time.Date(2022, 6, 10, 0, 0, 0, 0, time.Local)
@@ -419,6 +434,9 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				// defer DesktopNotify{}.ShowNotify(fmt.Sprintf("%s !!", school.Name), "学校単位では終わったよ～")
+				defer DesktopNotify{}.ShowNotify(school.Name, "おわったよ～")
+
 				defer utils.StdLog.Println(green.Sprintf("%s Done!\n", school.Name))
 				err = gig(*school)
 				if err != nil {
@@ -429,6 +447,9 @@ func main() {
 		}
 	}
 	wg.Wait()
+
+	// DesktopNotify{}.ShowNotify("BIG LOVE", "おつかれ～～！！ばいば～～い")
+
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
 }
