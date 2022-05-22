@@ -21,6 +21,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	color "github.com/fatih/color"
+	"github.com/gen2brain/beeep"
 	"github.com/spkg/bom"
 	"github.com/xuri/excelize/v2"
 )
@@ -341,16 +342,32 @@ type SchoolInfo struct {
 	UserPw string
 }
 
+type Notify interface {
+	ShowNotify(title, message, imgpath string)
+}
+type DesktopNotify struct{}
+
+func (d DesktopNotify) ShowNotify(title, message, imgpath string) {
+	beeep.Alert(title, message, imgpath)
+}
+
+//go:embed notify.png
+var notifyImg embed.FS
+
 //go:embed idpw/*
 var idpw embed.FS
 
 func init() {
 	utils.LoggingSetting("love.log")
+	// ほかにもファイルとかは先に読んでおいたほうがいいのではないかという気がする
 }
 
 func main() {
 
 	/*Script kiddie avoidance (experimental distribution)*/
+	var notify Notify
+	notify = &DesktopNotify{}
+	notify.ShowNotify("BIG LOVE", "開始しちゃうよ～", "notify.png")
 	now := time.Now()
 	target := time.Date(2022, 6, 10, 0, 0, 0, 0, time.Local)
 	if !now.Before(target) {
@@ -419,6 +436,8 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				defer notify.ShowNotify(fmt.Sprintf("%s おわったよ～", school.Name), "はたらけ！はい...", "notify.png")
+
 				defer utils.StdLog.Println(green.Sprintf("%s Done!\n", school.Name))
 				err = gig(*school)
 				if err != nil {
@@ -429,6 +448,8 @@ func main() {
 		}
 	}
 	wg.Wait()
+	notify.ShowNotify("BIG LOVE", "おつかれ～～！！ばいば～～い", "notify.png")
+
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
 }
