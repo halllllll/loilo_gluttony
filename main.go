@@ -67,7 +67,7 @@ func (loilo *LoiloClient) GetContent(url string) (res *http.Response, err error)
 	return
 }
 
-func (loilo *LoiloClient) GetClasses(url string) ([][]string, error) {
+func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) {
 	res, err := loilo.GetContent(url)
 	if err != nil {
 		log.Fatalln(err)
@@ -76,12 +76,11 @@ func (loilo *LoiloClient) GetClasses(url string) ([][]string, error) {
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		// ほんとはエラーハンドリングのために呼び出し元に戻すべき
-		log.Fatalln(err)
+		return
 	}
 	// 大きさ決め打ち
 	classesLen := doc.Find("tr").Length()
-	result := make([][]string, classesLen)
+	result = make([][]string, classesLen)
 	for i := 0; i < classesLen; i++ {
 		result[i] = make([]string, 6)
 	}
@@ -104,12 +103,11 @@ func (loilo *LoiloClient) GetClasses(url string) ([][]string, error) {
 				}
 			})
 			groupId, _ := tr.Find("input").Attr("value")
-			// fmt.Printf("group id: %s\n", gdddroupId)
 			row[len(row)-1] = groupId
 		}
 		result[ri] = row
 	})
-	return result, err
+	return
 }
 
 func (loilo *LoiloClient) GetClassMembers(url string) (result [][]string, err error) {
