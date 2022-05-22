@@ -5,3 +5,4 @@ sandbox*
 *.xlsx
 *.exe
 *.code-workspace
+*.test
