@@ -35,7 +35,9 @@ var (
 	classes      = fmt.Sprintf("%s/user_groups", host)
 	studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
 	teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
-	red          = color.New(color.Bold, color.FgHiRed)
+	red          = color.New(color.Bold, color.BgHiBlack, color.FgHiRed)
+	yellow       = color.New(color.Bold, color.BgHiBlack, color.BgHiYellow)
+	green        = color.New(color.Bold, color.BgHiBlack, color.BgHiGreen)
 )
 
 func Ua() (ua string) {
@@ -250,7 +252,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 			utils.ErrLog.Println(red.Sprint(err))
 		}
 	}
-
+	memberCount := make(map[string]bool)
 	// 各クラスの情報を別シートごとに作成
 	for classIdx, className := range classNames {
 		if classIdx == 0 {
@@ -289,6 +291,10 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 			if err := sheet.SetRow(cell, row); err != nil {
 				utils.ErrLog.Println(red.Sprint(err))
 			}
+			// 3番目がユーザーIDなので重複しない
+			if _, ok := memberCount[fmt.Sprint(row[2])]; !ok {
+				memberCount[fmt.Sprint(row[2])] = true
+			}
 		}
 		if err := sheet.Flush(); err != nil {
 			return err
@@ -300,6 +306,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 	if err = classWb.SaveAs(filepath.FromSlash(fmt.Sprintf("%s/%sclasses.xlsx", path, loilo.School.Name))); err != nil {
 		return err
 	}
+	utils.InfoLog.Println(yellow.Sprintf("%s : 登録生徒 %d \n", loilo.School.Name, len(memberCount)))
 	return
 }
 
@@ -412,6 +419,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				defer utils.StdLog.Println(green.Sprintf("%s Done!\n", school.Name))
 				err = gig(*school)
 				if err != nil {
 					utils.ErrLog.Println(red.Sprint(err))
@@ -495,6 +503,7 @@ func gig(school SchoolInfo) (err error) {
 	if err != nil {
 		return err
 	}
+	utils.InfoLog.Println(yellow.Sprintf("%s class num: %d\n", school.Name, len(classList)-1))
 	// ここでクラスのworkbookおよびsheet作成
 	err = client.CreateClassesXlsx(classList)
 	return
