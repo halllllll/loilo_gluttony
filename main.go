@@ -254,6 +254,10 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 
 	// 各クラスの情報を別シートごとに作成
 	for classIdx, className := range classNames {
+		if classIdx == 0 {
+			// ヘッダー無視
+			continue
+		}
 		groupId := groupIds[classIdx]
 		// excelのシート名に使えない記号を置換
 		// 一気にやるやり方がわからんのでreplaceする

@@ -1,5 +1,6 @@
-idpw
+idpw/*.csv
 tmp/
 sandbox*
 *.xlsx
 *.exe
+*.code_workspace
