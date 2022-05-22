@@ -37,8 +37,8 @@ var (
 	studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
 	teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
 	red          = color.New(color.Bold, color.BgHiBlack, color.FgHiRed)
-	yellow       = color.New(color.Bold, color.BgHiBlack, color.BgHiYellow)
-	green        = color.New(color.Bold, color.BgHiBlack, color.BgHiGreen)
+	yellow       = color.New(color.Bold, color.BgHiBlack, color.FgHiYellow)
+	green        = color.New(color.Bold, color.BgHiBlack, color.FgHiGreen)
 )
 
 func Ua() (ua string) {
@@ -342,17 +342,17 @@ type SchoolInfo struct {
 	UserPw string
 }
 
+//go:embed notify.png
+var notifyImg embed.FS
+
 type Notify interface {
-	ShowNotify(title, message, imgpath string)
+	ShowNotify(title, message string)
 }
 type DesktopNotify struct{}
 
-func (d DesktopNotify) ShowNotify(title, message, imgpath string) {
-	beeep.Alert(title, message, imgpath)
+func (d DesktopNotify) ShowNotify(title, message string) {
+	beeep.Notify(title, message, "notify.png")
 }
-
-//go:embed notify.png
-var notifyImg embed.FS
 
 //go:embed idpw/*
 var idpw embed.FS
@@ -364,10 +364,8 @@ func init() {
 
 func main() {
 
+	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	/*Script kiddie avoidance (experimental distribution)*/
-	var notify Notify
-	notify = &DesktopNotify{}
-	notify.ShowNotify("BIG LOVE", "開始しちゃうよ～", "notify.png")
 	now := time.Now()
 	target := time.Date(2022, 6, 10, 0, 0, 0, 0, time.Local)
 	if !now.Before(target) {
@@ -436,7 +434,8 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				defer notify.ShowNotify(fmt.Sprintf("%s おわったよ～", school.Name), "はたらけ！はい...", "notify.png")
+				// defer DesktopNotify{}.ShowNotify(fmt.Sprintf("%s !!", school.Name), "学校単位では終わったよ～")
+				defer DesktopNotify{}.ShowNotify(school.Name, "おわったよ～")
 
 				defer utils.StdLog.Println(green.Sprintf("%s Done!\n", school.Name))
 				err = gig(*school)
@@ -448,7 +447,8 @@ func main() {
 		}
 	}
 	wg.Wait()
-	notify.ShowNotify("BIG LOVE", "おつかれ～～！！ばいば～～い", "notify.png")
+
+	// DesktopNotify{}.ShowNotify("BIG LOVE", "おつかれ～～！！ばいば～～い")
 
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
