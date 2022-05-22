@@ -3,4 +3,4 @@ tmp/
 sandbox*
 *.xlsx
 *.exe
-*.code-workspace
+*.code_workspace
