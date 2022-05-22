@@ -1,3 +1,5 @@
 idpw
 tmp/
 sandbox*
+*.xlsx
+*.exe
