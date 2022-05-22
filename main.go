@@ -228,7 +228,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 	for rIdx := 0; rIdx <= len(allClasses); rIdx++ {
 		if rIdx == 0 {
 			if err := sheet.SetRow("A1", header); err != nil {
-				utils.ErrLog.Println(err)
+				utils.ErrLog.Println(red.Sprint(err))
 			}
 			continue
 		}
@@ -247,7 +247,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 		}
 		cell, _ := excelize.CoordinatesToCellName(1, rIdx)
 		if err = sheet.SetRow(cell, row); err != nil {
-			utils.ErrLog.Println(err)
+			utils.ErrLog.Println(red.Sprint(err))
 		}
 	}
 
@@ -287,7 +287,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 			}
 			cell, _ := excelize.CoordinatesToCellName(1, rowID+1)
 			if err := sheet.SetRow(cell, row); err != nil {
-				utils.ErrLog.Println(err)
+				utils.ErrLog.Println(red.Sprint(err))
 			}
 		}
 		if err := sheet.Flush(); err != nil {
@@ -359,14 +359,14 @@ func main() {
 	ct := time.Now().Format("2006_01_02")
 	Directory, err = CreateSaveDirectory(ct)
 	if err != nil {
-		utils.ErrLog.Println(err)
+		utils.ErrLog.Println(red.Sprint(err))
 	}
 	utils.StdLog.Println("save folder: ", Directory)
 
 	// 配布するときは埋め込むけどcsvファイルから読みこむ
 	entries, err := idpw.ReadDir("idpw")
 	if err != nil {
-		utils.ErrLog.Println(err)
+		utils.ErrLog.Println(red.Sprint(err))
 	}
 	var wg sync.WaitGroup
 
@@ -377,9 +377,11 @@ func main() {
 		if filepath.Ext(entry.Name()) != ".csv" {
 			continue
 		}
-		buf, err := idpw.ReadFile(filepath.FromSlash("idpw/" + entry.Name()))
+		// buf, err := idpw.ReadFile(filepath.FromSlash("idpw/" + entry.Name())) やめたほうがいいっぽい　ビルドしたやつをwindowsで起動するとフォルダが見えなくて落ちた
+
+		buf, err := idpw.ReadFile("idpw/" + entry.Name())
 		if err != nil {
-			utils.ErrLog.Println(err)
+			utils.ErrLog.Println(red.Sprint(err))
 		}
 		reader := bytes.NewReader(buf)
 		f := csv.NewReader(bom.NewReader(reader))
@@ -393,7 +395,7 @@ func main() {
 			}
 			if err != nil {
 				// なぜかcsvの行を読めず
-				utils.ErrLog.Println(err)
+				utils.ErrLog.Println(red.Sprint(err))
 			}
 			// 最初はヘッダーとする
 			if idx == 0 {
@@ -412,7 +414,7 @@ func main() {
 				defer wg.Done()
 				err = gig(*school)
 				if err != nil {
-					utils.ErrLog.Println(err)
+					utils.ErrLog.Println(red.Sprint(err))
 				}
 			}()
 			idx++
