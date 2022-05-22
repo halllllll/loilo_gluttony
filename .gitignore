@@ -1,6 +1,8 @@
-idpw/*.csv
+*.csv
+*.log
 tmp/
 sandbox*
 *.xlsx
 *.exe
 *.code-workspace
+*.test
