@@ -167,8 +167,6 @@ func (loilo *LoiloClient) GetClassMembers(url string) (result [][]string, err er
 					u.userKanaName = td.Text()
 				case 3:
 					u.userId = td.Text()
-					// u.googleSSO, _ = td.Find("div > img[src*=icon_google]").Attr("data-original-title")
-					// u.msSSO, _ = td.Find("div > img[src*=icon_microsoft]").Attr("data-original-title")
 					td.Find("div > img").Each(func(idx int, sel *goquery.Selection) {
 						if c, _ := sel.Attr("src"); strings.Contains(c, "icon_google") {
 							u.googleSSO, _ = sel.Attr("title")
