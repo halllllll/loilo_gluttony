@@ -167,8 +167,15 @@ func (loilo *LoiloClient) GetClassMembers(url string) (result [][]string, err er
 					u.userKanaName = td.Text()
 				case 3:
 					u.userId = td.Text()
-					u.googleSSO, _ = td.Find("div > i.fa-google").Attr("title")
-					u.msSSO, _ = td.Find("div > i.fa-microsoft").Attr("title")
+					// u.googleSSO, _ = td.Find("div > img[src*=icon_google]").Attr("data-original-title")
+					// u.msSSO, _ = td.Find("div > img[src*=icon_microsoft]").Attr("data-original-title")
+					td.Find("div > img").Each(func(idx int, sel *goquery.Selection) {
+						if c, _ := sel.Attr("src"); strings.Contains(c, "icon_google") {
+							u.googleSSO, _ = sel.Attr("title")
+						} else if strings.Contains(c, "icon_microsoft") {
+							u.msSSO, _ = sel.Attr("title")
+						}
+					})
 				default:
 				}
 			})
@@ -367,7 +374,7 @@ func main() {
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	/*Script kiddie avoidance (experimental distribution)*/
 	now := time.Now()
-	target := time.Date(2022, 6, 10, 0, 0, 0, 0, time.Local)
+	target := time.Date(2022, 7, 10, 0, 0, 0, 0, time.Local)
 	if !now.Before(target) {
 		utils.ErrLog.Println(red.Sprint("!! EXPIRED !!"))
 		utils.ErrLog.Println(red.Sprint("使用期限が切れました"))
@@ -508,6 +515,22 @@ func gig(school SchoolInfo) (err error) {
 			return errors.New(fmt.Sprintf("can't login to [ %s ] ...\n", school.Name))
 		}
 	}
+	// htmlファイルを保存する場合(ローカルから読み取る時用)
+	/*
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			utils.ErrLog.Fatalln(err)
+		}
+
+		// fmt.Println(string(b))
+		out, err := os.Create(schoolDir + "/" + "hoge.html")
+		if err != nil {
+			utils.ErrLog.Fatalln(err)
+		}
+		defer out.Close()
+		_, err = io.Copy(out, bytes.NewReader(b))
+	*/
+
 	// 生徒情報xlsx（中身はgetしてるだけ）
 	err = client.SaveXlsxFile(studentsXlsx, fmt.Sprintf("%sstudents", school.Name))
 	if err != nil {
