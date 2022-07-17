@@ -459,6 +459,50 @@ func main() {
 	bufio.NewScanner(os.Stdin).Scan()
 }
 
+func createClient(school SchoolInfo, values url.Values) (client *LoiloClient, err error) {
+	jar, err := cookiejar.New(&cookiejar.Options{})
+	if err != nil {
+		return client, err
+	}
+	client = &LoiloClient{
+		School: school,
+		Loilo: http.Client{
+			Jar: jar,
+		},
+	}
+	// ログインを試す
+	req, err := http.NewRequest(
+		"POST",
+		entry,
+		strings.NewReader(values.Encode()),
+	)
+	if err != nil {
+		return client, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", Ua())
+	res, err := client.Do(req)
+	if err != nil {
+		return client, err
+	}
+	defer res.Body.Close()
+
+	// ログインできてるか確認
+	res, err = client.GetContent(home)
+	defer res.Body.Close()
+	if err != nil {
+		return client, err
+	}
+	if doc, err := goquery.NewDocumentFromReader(res.Body); doc.Find("h1.d-flex").Text() == "" || err != nil {
+		if err != nil {
+			return client, err
+		} else {
+			return client, errors.New(fmt.Sprintf("can't login to [ %s ] ...\n", school.Name))
+		}
+	}
+	return client, nil
+}
+
 func gig(school SchoolInfo) (err error) {
 	utils.StdLog.Printf("let's gig... %s\n", school.Name)
 	schoolDir := filepath.FromSlash(Directory + "/" + school.Name)
@@ -472,46 +516,9 @@ func gig(school SchoolInfo) (err error) {
 	values.Add("user[password]", school.UserPw)
 
 	// cookie jarを用意してログイン。clientを使い回す
-	jar, err := cookiejar.New(&cookiejar.Options{})
+	client, err := createClient(school, values)
 	if err != nil {
 		return err
-	}
-	client := &LoiloClient{
-		School: school,
-		Loilo: http.Client{
-			Jar: jar,
-		},
-	}
-
-	// ログインを試す
-	req, err := http.NewRequest(
-		"POST",
-		entry,
-		strings.NewReader(values.Encode()),
-	)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", Ua())
-	res, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	// ログインできてるか確認
-	res, err = client.GetContent(home)
-	defer res.Body.Close()
-	if err != nil {
-		return err
-	}
-	if doc, err := goquery.NewDocumentFromReader(res.Body); doc.Find("h1.d-flex").Text() == "" || err != nil {
-		if err != nil {
-			return err
-		} else {
-			return errors.New(fmt.Sprintf("can't login to [ %s ] ...\n", school.Name))
-		}
 	}
 	// htmlファイルを保存する場合(ローカルから読み取る時用)
 	/*
