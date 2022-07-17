@@ -459,7 +459,12 @@ func main() {
 	bufio.NewScanner(os.Stdin).Scan()
 }
 
-func createClient(school SchoolInfo, values url.Values) (client *LoiloClient, err error) {
+func createClient(school SchoolInfo) (client *LoiloClient, err error) {
+	values := url.Values{}
+	values.Add("user[school][code]", school.Id)
+	values.Add("user[username]", school.UserId)
+	values.Add("user[password]", school.UserPw)
+
 	jar, err := cookiejar.New(&cookiejar.Options{})
 	if err != nil {
 		return client, err
@@ -510,13 +515,9 @@ func gig(school SchoolInfo) (err error) {
 	if err != nil {
 		return err
 	}
-	values := url.Values{}
-	values.Add("user[school][code]", school.Id)
-	values.Add("user[username]", school.UserId)
-	values.Add("user[password]", school.UserPw)
 
 	// cookie jarを用意してログイン。clientを使い回す
-	client, err := createClient(school, values)
+	client, err := createClient(school)
 	if err != nil {
 		return err
 	}
