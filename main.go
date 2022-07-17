@@ -194,7 +194,7 @@ func (loilo *LoiloClient) GetGraduates(url string) (result [][]string, err error
 	// 卒業生はエンドポイント/graduate=1&page=Xっていうクエリになる
 	// 複数ページが無いときはprev/nextのナビすら無いのでそこの数字とか取得するのは悪手？（なかったら1ページだけ、ということにすればいいけど）
 	// 卒業生ページの構造がほぼ在校生のものと同じだったのでGetMembers流用
-	pageNum := 3
+	pageNum := 0
 	var tmpResult [][]string
 	for {
 		res, e := loilo.GetContent(fmt.Sprintf("%s&page=%d", url, pageNum))
@@ -360,10 +360,44 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 	if err = sheet.Flush(); err != nil {
 		return err
 	}
-	if err = classWb.SaveAs(filepath.FromSlash(fmt.Sprintf("%s/%sclasses.xlsx", path, loilo.School.Name))); err != nil {
+	if err = classWb.SaveAs(filepath.FromSlash(fmt.Sprintf("%s/%s__classes.xlsx", path, loilo.School.Name))); err != nil {
 		return err
 	}
-	utils.InfoLog.Println(yellow.Sprintf("%s : 登録生徒 %d \n", loilo.School.Name, len(memberCount)))
+	utils.InfoLog.Println(yellow.Sprintf("%s 登録生徒 : %d \n", loilo.School.Name, len(memberCount)))
+	return
+}
+
+func (loilo *LoiloClient) CreateGraduatesXlsx(graduatesList [][]string) (err error) {
+	classWb := excelize.NewFile()
+	classWb.NewSheet("Graduates") // 現状使ってるやつ
+	classWb.DeleteSheet("Sheet1") // Sheet1はexcelizeでデフォルトで作られる/Stream中にシート名を変えるとエラーになったのでここでやる
+	sheet, err := classWb.NewStreamWriter("Graduates")
+	if err != nil {
+		return err
+	}
+	path := filepath.FromSlash(Directory + "/" + loilo.School.Name)
+	for rIdx, listRow := range graduatesList {
+		// setRowが[]interface{}型のみ受け付けるので、スライスをそのまま使うことはできないしコピーして移すこともできない
+		// ので、愚直にループでひとつずついれる
+		row := make([]interface{}, len(listRow))
+		for idx, v := range listRow {
+			row[idx] = v
+		}
+		cell, err := excelize.CoordinatesToCellName(1, rIdx+1)
+		if err != nil {
+			return err
+		}
+		if err = sheet.SetRow(cell, row); err != nil {
+			utils.ErrLog.Println(red.Sprint(err))
+		}
+	}
+	if err = sheet.Flush(); err != nil {
+		return err
+	}
+	if err = classWb.SaveAs(filepath.FromSlash(fmt.Sprintf("%s/%s__graduates.xlsx", path, loilo.School.Name))); err != nil {
+		return err
+	}
+
 	return
 }
 
@@ -518,7 +552,7 @@ func createClient(school SchoolInfo) (client *LoiloClient, err error) {
 
 	jar, err := cookiejar.New(&cookiejar.Options{})
 	if err != nil {
-		return client, err
+		return
 	}
 	client = &LoiloClient{
 		School: school,
@@ -533,13 +567,13 @@ func createClient(school SchoolInfo) (client *LoiloClient, err error) {
 		strings.NewReader(values.Encode()),
 	)
 	if err != nil {
-		return client, err
+		return
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", Ua())
 	res, err := client.Do(req)
 	if err != nil {
-		return client, err
+		return
 	}
 	defer res.Body.Close()
 
@@ -547,7 +581,7 @@ func createClient(school SchoolInfo) (client *LoiloClient, err error) {
 	resp, err := client.GetContent(home)
 	defer resp.Body.Close()
 	if err != nil {
-		return client, err
+		return
 	}
 	if doc, err := goquery.NewDocumentFromReader(resp.Body); doc.Find("h1.d-flex").Text() == "" || err != nil {
 		if err != nil {
@@ -556,7 +590,7 @@ func createClient(school SchoolInfo) (client *LoiloClient, err error) {
 			return client, errors.New(fmt.Sprintf("can't login to [ %s ] ...\n", school.Name))
 		}
 	}
-	return client, nil
+	return
 }
 
 func gig(school SchoolInfo) (err error) {
@@ -564,13 +598,13 @@ func gig(school SchoolInfo) (err error) {
 	schoolDir := filepath.FromSlash(Directory + "/" + school.Name)
 	err = os.Mkdir(schoolDir, os.ModePerm)
 	if err != nil {
-		return err
+		return
 	}
 
 	// cookie jarを用意してログイン。clientを使い回す
 	client, err := createClient(school)
 	if err != nil {
-		return err
+		return
 	}
 	// htmlファイルを保存する場合(ローカルから読み取る時用)
 	/*
@@ -589,23 +623,38 @@ func gig(school SchoolInfo) (err error) {
 	*/
 
 	// 生徒情報xlsx（中身はgetしてるだけ）
-	err = client.SaveXlsxFile(studentsXlsx, fmt.Sprintf("%sstudents", school.Name))
+	err = client.SaveXlsxFile(studentsXlsx, fmt.Sprintf("%s__students", school.Name))
 	if err != nil {
-		return err
+		return
 	}
 	// 先生情報xlsx（中身はgetしてるだけ）
-	err = client.SaveXlsxFile(teachersXlsx, fmt.Sprintf("%steachers", school.Name))
+	err = client.SaveXlsxFile(teachersXlsx, fmt.Sprintf("%s__teachers", school.Name))
 	if err != nil {
-		return err
+		return
 	}
 
 	// クラス情報のexcelを仕様通りに作ってやる
 	classList, err := client.GetClasses(classes)
 	if err != nil {
-		return err
+		return
 	}
 	utils.InfoLog.Println(yellow.Sprintf("%s class num: %d\n", school.Name, len(classList)-1))
 	// ここでクラスのworkbookおよびsheet作成
 	err = client.CreateClassesXlsx(classList)
+	if err != nil {
+		return
+	}
+
+	// 卒業生
+	graduatesList, err := client.GetGraduates(graduates)
+	if err != nil {
+		return
+	}
+	if len(graduatesList) == 0 {
+		// こういうことがある（なぜかヘッダーが入ってない）
+		graduatesList = append(graduatesList, []string{"氏名", "ふりがな", "ユーザーID", "Google連携アカウント", "Microsoft連携アカウント"})
+	}
+	utils.InfoLog.Println(yellow.Sprintf("%s graduates: %d\n", school.Name, len(graduatesList)-1))
+	err = client.CreateGraduatesXlsx(graduatesList)
 	return
 }
