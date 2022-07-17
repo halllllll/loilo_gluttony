@@ -372,7 +372,7 @@ func main() {
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	/*Script kiddie avoidance (experimental distribution)*/
 	now := time.Now()
-	target := time.Date(2022, 7, 10, 0, 0, 0, 0, time.Local)
+	target := time.Date(2022, 8, 10, 0, 0, 0, 0, time.Local)
 	if !now.Before(target) {
 		utils.ErrLog.Println(red.Sprint("!! EXPIRED !!"))
 		utils.ErrLog.Println(red.Sprint("使用期限が切れました"))

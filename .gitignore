@@ -6,3 +6,4 @@ sandbox*
 *.exe
 *.code-workspace
 *.test
+.DS_Store
