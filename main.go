@@ -34,6 +34,7 @@ var (
 	entry        = fmt.Sprintf("%s/users/sign_in", host)
 	home         = fmt.Sprintf("%s/school_dashboard", host)
 	classes      = fmt.Sprintf("%s/user_groups", host)
+	graduates    = fmt.Sprintf("%s/students?graduated=1", host)
 	studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
 	teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
 	red          = color.New(color.Bold, color.BgHiBlack, color.FgHiRed)
@@ -115,7 +116,7 @@ func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) 
 	return
 }
 
-func (loilo *LoiloClient) GetClassMembers(url string) (result [][]string, err error) {
+func (loilo *LoiloClient) GetMembers(url string) (result [][]string, err error) {
 	res, err := loilo.GetContent(url)
 	if err != nil {
 		return
@@ -186,6 +187,56 @@ func (loilo *LoiloClient) GetClassMembers(url string) (result [][]string, err er
 		}
 		result[ri] = row
 	})
+	return
+}
+
+func (loilo *LoiloClient) GetGraduates(url string) (result [][]string, err error) {
+	// 卒業生はエンドポイント/graduate=1&page=Xっていうクエリになる
+	// 複数ページが無いときはprev/nextのナビすら無いのでそこの数字とか取得するのは悪手？（なかったら1ページだけ、ということにすればいいけど）
+	// 卒業生ページの構造がほぼ在校生のものと同じだったのでGetMembers流用
+	pageNum := 3
+	var tmpResult [][]string
+	for {
+		res, e := loilo.GetContent(fmt.Sprintf("%s&page=%d", url, pageNum))
+		if e != nil {
+			err = e
+			return
+		}
+		doc, e := goquery.NewDocumentFromReader(res.Body)
+		if e != nil {
+			err = e
+			return
+		}
+		tbodyChildrenNum := doc.Find("tbody").First().Children().Length()
+		if tbodyChildrenNum == 0 {
+			// 空なのでもう誰もいない
+			break
+		}
+		pageNum += 1
+		temp, e := loilo.GetMembers(fmt.Sprintf("%s&page=%d", url, pageNum))
+		if e != nil {
+			err = e
+			return
+		}
+		// めんどくさいのでまとめて追加
+		tmpResult = append(tmpResult, temp...)
+
+	}
+	// まとめて追加した結果毎回要らんヘッダーとかなぜか空のやつも取れてしまうのでとりあえず重複削除
+	encounter := map[[5]string]int{}
+	// 空は最初から無視するのであらかじめいれておく
+	encounter[[5]string{"", "", "", "", ""}] = 1
+	for _, v := range tmpResult {
+		var vv [5]string
+		copy(vv[:], v)
+		if _, ok := encounter[vv]; !ok {
+			encounter[vv] = 1
+			result = append(result, v)
+		} else {
+			encounter[vv]++
+		}
+	}
+	encounter[[5]string{"", "", "", "", ""}] -= 1 // 律儀（いらんでしょ）
 	return
 }
 
@@ -284,7 +335,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 		if err != nil {
 			return err
 		}
-		members, err := loilo.GetClassMembers(fmt.Sprintf("%s/%s/memberships", classes, groupId))
+		members, err := loilo.GetMembers(fmt.Sprintf("%s/%s/memberships", classes, groupId))
 		if err != nil {
 			return err
 		}
@@ -493,12 +544,12 @@ func createClient(school SchoolInfo) (client *LoiloClient, err error) {
 	defer res.Body.Close()
 
 	// ログインできてるか確認
-	res, err = client.GetContent(home)
-	defer res.Body.Close()
+	resp, err := client.GetContent(home)
+	defer resp.Body.Close()
 	if err != nil {
 		return client, err
 	}
-	if doc, err := goquery.NewDocumentFromReader(res.Body); doc.Find("h1.d-flex").Text() == "" || err != nil {
+	if doc, err := goquery.NewDocumentFromReader(resp.Body); doc.Find("h1.d-flex").Text() == "" || err != nil {
 		if err != nil {
 			return client, err
 		} else {
