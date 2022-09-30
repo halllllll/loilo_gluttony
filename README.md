@@ -11,3 +11,9 @@ In my town, `LoiloNote` was adopted as one of the tools used in the [GIGA School
 I have determined that according to robots.txt, this method of scraping is not currently prohibited. However, when using this method, please use your own judgment and modify it accordingly to avoid burdening the server.
 
 (For reference, the LoiloNote accounts used by my client, City Board of Education, are approximately 180)
+
+
+build ex:
+```
+GOOS=windows GOARCH=386 go build main.go
+```
