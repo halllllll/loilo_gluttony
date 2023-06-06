@@ -1,6 +1,6 @@
-module loilo
+module github.com/halllllll/loilo_gluttony/v2
 
-go 1.18
+go 1.20
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0

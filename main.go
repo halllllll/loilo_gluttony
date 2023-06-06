@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"loilo/utils"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
@@ -22,6 +22,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	color "github.com/fatih/color"
 	"github.com/gen2brain/beeep"
+	"github.com/halllllll/loilo_gluttony/v2/setup"
+	"github.com/halllllll/loilo_gluttony/v2/utils"
 	"github.com/spkg/bom"
 	"github.com/xuri/excelize/v2"
 )
@@ -79,6 +81,9 @@ func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) 
 	if err != nil {
 		return
 	}
+	fmt.Println("ちなレスポンス")
+	fmt.Printf("Status: %s\n", res.Status)
+	fmt.Printf("body: %v\nんぉ〜〜〜\n%#v\n", res.Body, res.Body)
 	defer res.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -92,6 +97,7 @@ func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) 
 		result[i] = make([]string, 6)
 	}
 	doc.Find("tr").Each(func(ri int, tr *goquery.Selection) {
+		fmt.Printf("ri: %d\n", ri)
 		row := make([]string, 6)
 		if ri == 0 {
 			tr.Find("th").Each(func(ci int, th *goquery.Selection) {
@@ -444,8 +450,8 @@ func (d DesktopNotify) ShowNotify(title, message string) {
 	beeep.Notify(title, message, "notify.png")
 }
 
-//go:embed idpw/*
-var idpw embed.FS
+//go:embed info/*
+var LoginInfo embed.FS
 
 func init() {
 	utils.LoggingSetting("love.log")
@@ -455,17 +461,11 @@ func init() {
 func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
-	/*Script kiddie avoidance (experimental distribution)*/
-	now := time.Now()
-	target := time.Date(2022, 10, 10, 0, 0, 0, 0, time.Local)
-	if !now.Before(target) {
-		utils.ErrLog.Println(red.Sprint("!! EXPIRED !!"))
-		utils.ErrLog.Println(red.Sprint("使用期限が切れました"))
-		utils.ErrLog.Println(red.Sprintf("expired time: %s", target.Format("2006/01/02 15:04:05")))
+
+	if !setup.Hello(&LoginInfo) {
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
 	}
-	/*End of Script kiddie avoidance (experimental distribution)*/
 
 	// フォルダ名 なんでもいいけど日付にしてる
 	ct := time.Now().Format("2006_01_02")
@@ -476,7 +476,7 @@ func main() {
 	utils.StdLog.Println("save folder: ", Directory)
 
 	// 配布するときは埋め込むけどcsvファイルから読みこむ
-	entries, err := idpw.ReadDir("idpw")
+	entries, err := LoginInfo.ReadDir("info")
 	if err != nil {
 		utils.ErrLog.Println(red.Sprint(err))
 	}
@@ -491,7 +491,7 @@ func main() {
 		}
 		// buf, err := idpw.ReadFile(filepath.FromSlash("idpw/" + entry.Name())) やめたほうがいいっぽい　ビルドしたやつをwindowsで起動するとフォルダが見えなくて落ちた
 
-		buf, err := idpw.ReadFile("idpw/" + entry.Name())
+		buf, err := LoginInfo.ReadFile("info/" + entry.Name())
 		if err != nil {
 			utils.ErrLog.Println(red.Sprint(err))
 		}
@@ -515,11 +515,10 @@ func main() {
 				continue
 			}
 			school := &SchoolInfo{
-				Area:   record[0],
-				Name:   record[1],
-				Id:     record[2],
-				UserId: record[3],
-				UserPw: record[4],
+				Name:   record[0],
+				Id:     record[1],
+				UserId: record[2],
+				UserPw: record[3],
 			}
 			wg.Add(1)
 			go func() {
