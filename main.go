@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
@@ -461,9 +460,13 @@ func init() {
 func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
-
-	if !setup.Hello(&LoginInfo) {
+	proj := setup.NewProject()
+	if err := proj.Hello(&LoginInfo); err != nil {
+		utils.ErrLog.Println(err)
 		bufio.NewScanner(os.Stdin).Scan()
+		os.Exit(1)
+	} else {
+		fmt.Println("ok!")
 		os.Exit(1)
 	}
 

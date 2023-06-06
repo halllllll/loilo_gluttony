@@ -6,13 +6,19 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
+	"os"
+	"path/filepath"
 
-	"github.com/halllllll/loilo_gluttony/v2/utils"
 	"github.com/spkg/bom"
 )
 
 // 保存用のファイルやパス、データ用ファイル名など
+var (
+	dataDirName  = "info"
+	dataFileName = "data.csv"
+	logFileName  = "love.log"
+)
+
 type Project struct {
 	DataDirName  string
 	DataFileName string
@@ -20,41 +26,37 @@ type Project struct {
 }
 
 func NewProject() *Project {
-	return new(Project)
+	return &Project{
+		DataDirName:  dataDirName,
+		DataFileName: dataFileName,
+		LogFileName:  logFileName,
+	}
 }
 
 // ファイルの確認と保存用フォルダの作成
-func Hello(vd *embed.FS) bool {
-	entries, err := vd.ReadDir("info")
-	if err != nil {
-		utils.ErrLog.Println(err)
-		log.Fatal(err)
+func (proj *Project) Hello(vd *embed.FS) ([]SchoolInfo, error) {
+	if _, err := os.Stat(filepath.Join(proj.DataDirName, proj.DataFileName)); err != nil {
+		return fmt.Errorf("file not found - %w", err)
 	}
-	for _, entry := range entries {
-		if entry.IsDir() {
+	buf, err := vd.ReadFile(filepath.Join(proj.DataDirName, proj.DataFileName))
+	if err != nil {
+		return fmt.Errorf("error read file %w", err)
+	}
+	reader := bytes.NewReader(buf)
+	f := csv.NewReader(bom.NewReader(reader))
+	for idx := 0; ; idx++ {
+		record, err := f.Read()
+		if idx == 0 {
 			continue
 		}
-		if entry.Name() != "data.csv" {
-			continue
+		if err == io.EOF {
+			break
 		}
-		// read data.csv
-		buf, err := vd.ReadFile("info/data.csv")
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("error read line - %w", err)
 		}
-		reader := bytes.NewReader(buf)
-		f := csv.NewReader(bom.NewReader(reader))
-		for {
-			record, err := f.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("%v\n", record)
-		}
+		fmt.Printf("%v\n", record)
 	}
 
-	return false
+	return nil
 }
