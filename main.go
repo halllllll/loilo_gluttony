@@ -21,6 +21,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	color "github.com/fatih/color"
 	"github.com/gen2brain/beeep"
+	"github.com/halllllll/loilo_gluttony/v2/scrape"
 	"github.com/halllllll/loilo_gluttony/v2/setup"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
 	"github.com/spkg/bom"
@@ -461,18 +462,26 @@ func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	proj := setup.NewProject()
-	loginRecords, err := proj.Hello(&LoginInfo)
+	schoolInfo, err := proj.Hello(&LoginInfo)
 	if err != nil {
 		fmt.Println("エラー？")
 		utils.ErrLog.Println(err)
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
 	} else {
-		fmt.Println("うまくいった？")
-		fmt.Println(loginRecords)
+		utils.StdLog.Println("save folder: ", proj.SaveDirName)
+		for _, school := range schoolInfo {
+			fmt.Println(school)
+			_, err := scrape.Login(&school)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Printf("internal id: %d\n", school.InternalSchoolId)
+			}
+		}
+
 		os.Exit(1)
 	}
-	utils.StdLog.Println("save folder: ", proj.SaveDirName)
 
 	// フォルダ名 なんでもいいけど日付にしてる
 	ct := time.Now().Format("2006_01_02")

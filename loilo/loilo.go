@@ -16,12 +16,12 @@ var (
 
 type SchoolInfo struct {
 	Name             string
-	SchoolId         string
+	Id               string
 	AdminId          string
 	AdminPw          string
-	InternalSchoolId string
+	InternalSchoolId int
 }
 
-type Record struct {
-	Name string
+func (si *SchoolInfo) GetClassURL() string {
+	return fmt.Sprintf("%s/%d/classes", Host, si.InternalSchoolId)
 }

@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/gocarina/gocsv"
+	"github.com/halllllll/loilo_gluttony/v2/loilo"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
+
 	"github.com/spkg/bom"
 )
 
@@ -37,7 +39,7 @@ func NewProject() *Project {
 }
 
 // ファイルの確認・中身の返却と保存用フォルダの作成
-func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
+func (proj *Project) Hello(vd *embed.FS) ([]loilo.SchoolInfo, error) {
 	if _, err := os.Stat(filepath.Join(proj.DataDirName, proj.DataFileName)); err != nil {
 		return nil, fmt.Errorf("file not found - %w", err)
 	}
@@ -45,16 +47,27 @@ func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error read file %w", err)
 	}
-	var schools []LoginRecord
-	if err := gocsv.UnmarshalBytes(bom.Clean(buf), &schools); err != nil {
+	var loginrecords []LoginRecord
+	// 一気に読み込む
+	if err := gocsv.UnmarshalBytes(bom.Clean(buf), &loginrecords); err != nil {
 		return nil, fmt.Errorf("error read csv - %w", err)
 	}
 	saveTo, err := createSaveDirectory(ct())
 	if err != nil {
 		return nil, fmt.Errorf("error create save dir - %w", err)
 	}
+
 	fmt.Printf("created? %s\n", saveTo)
 	proj.SaveDirName = saveTo
+	schools := make([]loilo.SchoolInfo, len(loginrecords))
+	for i, r := range loginrecords {
+		schools[i] = loilo.SchoolInfo{
+			Name:    r.SchoolName,
+			Id:      r.SchoolId,
+			AdminId: r.AdminId,
+			AdminPw: r.AdminPw,
+		}
+	}
 	return schools, nil
 }
 
