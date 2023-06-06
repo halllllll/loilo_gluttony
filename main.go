@@ -335,7 +335,7 @@ func (loilo *LoiloClient) CreateClassesXlsx(allClasses [][]string) (err error) {
 		sheetName := fmt.Sprintf("%s_%s", className, groupId)
 
 		// 2シート目以降 各クラス情報（エントリーポイント /user_groups/{groupid}/membership
-		_ = classWb.NewSheet(sheetName)
+		_, _ = classWb.NewSheet(sheetName)
 		sheet, err := classWb.NewStreamWriter(sheetName)
 		if err != nil {
 			return err
@@ -461,12 +461,13 @@ func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	proj := setup.NewProject()
-	if err := proj.Hello(&LoginInfo); err != nil {
+	schools, err := proj.Hello(&LoginInfo)
+	if err != nil {
 		utils.ErrLog.Println(err)
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
 	} else {
-		fmt.Println("ok!")
+		fmt.Println(schools)
 		os.Exit(1)
 	}
 
