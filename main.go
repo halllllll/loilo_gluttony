@@ -461,15 +461,18 @@ func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	proj := setup.NewProject()
-	schools, err := proj.Hello(&LoginInfo)
+	loginRecords, err := proj.Hello(&LoginInfo)
 	if err != nil {
+		fmt.Println("エラー？")
 		utils.ErrLog.Println(err)
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
 	} else {
-		fmt.Println(schools)
+		fmt.Println("うまくいった？")
+		fmt.Println(loginRecords)
 		os.Exit(1)
 	}
+	utils.StdLog.Println("save folder: ", proj.SaveDirName)
 
 	// フォルダ名 なんでもいいけど日付にしてる
 	ct := time.Now().Format("2006_01_02")

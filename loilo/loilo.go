@@ -1,6 +1,8 @@
 package loilo
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var (
 	Host  = "https://n.loilo.tv"
@@ -18,4 +20,8 @@ type SchoolInfo struct {
 	AdminId          string
 	AdminPw          string
 	InternalSchoolId string
+}
+
+type Record struct {
+	Name string
 }
