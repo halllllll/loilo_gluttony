@@ -463,10 +463,8 @@ func main() {
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 
 	if !setup.Hello(&LoginInfo) {
-		log.Fatal("nn~~~")
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
-		fmt.Println("ここにはこないよね！")
 	}
 
 	// フォルダ名 なんでもいいけど日付にしてる
