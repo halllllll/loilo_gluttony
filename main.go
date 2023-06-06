@@ -472,11 +472,13 @@ func main() {
 		utils.StdLog.Println("save folder: ", proj.SaveDirName)
 		for _, school := range schoolInfo {
 			fmt.Println(school)
-			_, err := scrape.Login(&school)
+			c, err := scrape.Login(&school)
 			if err != nil {
 				fmt.Println(err)
 			} else {
 				fmt.Printf("internal id: %d\n", school.InternalSchoolId)
+				thisC := c.Clone()
+				scrape.GetContent(&school, thisC)
 			}
 		}
 

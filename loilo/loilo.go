@@ -22,6 +22,11 @@ type SchoolInfo struct {
 	InternalSchoolId int
 }
 
-func (si *SchoolInfo) GetClassURL() string {
+func (si *SchoolInfo) GenStudentExelUrl() string {
+	return fmt.Sprintf("%s/schools/%d/students.xlsx", Host, si.InternalSchoolId)
+}
+
+func (si *SchoolInfo) GenClassURL() string {
+	// ?
 	return fmt.Sprintf("%s/%d/classes", Host, si.InternalSchoolId)
 }

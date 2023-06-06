@@ -81,3 +81,19 @@ func Login(schoolInfo *loilo.SchoolInfo) (*colly.Collector, error) {
 	}
 	return c, nil
 }
+
+func GetContent(schoolInfo *loilo.SchoolInfo, c *colly.Collector) {
+	// 試しに取得してみる
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println("gacha!")
+		fmt.Println(r.StatusCode)
+		fmt.Println("./" + r.FileName())
+		if err := r.Save(r.FileName()); err != nil {
+			fmt.Printf("save error ... %s\n", err)
+		}
+		fmt.Println("done?")
+	})
+	fmt.Printf("goto %s\n", schoolInfo.GenStudentExelUrl())
+	c.Visit(schoolInfo.GenStudentExelUrl())
+	c.Wait()
+}
