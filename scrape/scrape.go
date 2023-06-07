@@ -97,7 +97,6 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 		SchoolInfo: school,
 		Project:    project,
 	}
-	fmt.Println(agent.Project.SaveDirRoot, agent.Project.DataDirName)
 	return agent, nil
 }
 
@@ -167,7 +166,7 @@ func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
 	return nil
 }
 
-func (agent *ScrapeAgent) TouchYou(url string) {
+func (agent *ScrapeAgent) TouchSample(url string) {
 	c := *agent.Collector.Clone()
 
 	c.OnResponse(func(r *colly.Response) {

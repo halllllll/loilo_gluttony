@@ -21,6 +21,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	color "github.com/fatih/color"
 	"github.com/gen2brain/beeep"
+	"github.com/halllllll/loilo_gluttony/v2/loilo"
 	"github.com/halllllll/loilo_gluttony/v2/scrape"
 	"github.com/halllllll/loilo_gluttony/v2/setup"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
@@ -443,7 +444,9 @@ type Notify interface {
 type DesktopNotify struct{}
 
 func (d DesktopNotify) ShowNotify(title, message string) {
-	beeep.Notify(title, message, "notify.png")
+	img, _ := notifyImg.Open("notify.png")
+	fileInfo, _ := img.Stat()
+	beeep.Notify(title, message, fileInfo.Name())
 }
 
 //go:embed info/*
@@ -456,43 +459,63 @@ func init() {
 
 func main() {
 
-	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
+	DesktopNotify{}.ShowNotify("BIG LOVE", "START")
 	proj := setup.NewProject()
 	loginInfo, err := proj.Hello(&LoginInfo)
 	if err != nil {
-		fmt.Println("エラー？")
-		utils.ErrLog.Println(err)
+		utils.ErrLog.Println(red.Sprintln("CANT START PROJECT."))
+		utils.ErrLog.Println(red.Sprintln((err)))
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
-	} else {
-		utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
-		for _, info := range loginInfo {
-			agent, err := scrape.Login(&info, proj)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				fmt.Printf("internal id: %d\n", agent.SchoolInfo.InternalSchoolId)
-				// saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
-				// if err != nil {
-				// 	utils.ErrLog.Printf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err)
-				// 	continue
-				// }
-				// studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-
-				// agent.SaveContent(agent.SchoolInfo.GenStudentExelUrl(), studentFile)
-				// teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
-
-				// agent.SaveContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
-				// classes (test)
-				// agent.GenClassesInfo()
-				// agent.GetClassInfoById()
-
-				agent.TouchYou("https://n.loilo.tv/subjects?force_all=1")
-			}
-		}
-
-		os.Exit(1)
 	}
+	utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
+
+	var wg2 sync.WaitGroup
+	for _, info := range loginInfo {
+		wg2.Add(1)
+		go func(data setup.LoginRecord) {
+			defer wg2.Done()
+			agent, err := scrape.Login(&data, proj)
+			if err != nil {
+				utils.ErrLog.Println(red.Sprintf("[%s] - failed to login - %s", data.SchoolName, err))
+				return
+			}
+			utils.StdLog.Println(green.Sprintf("%s - START\n", agent.SchoolInfo.Name))
+
+			saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
+			if err != nil {
+				utils.ErrLog.Println(red.Sprintf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err))
+				return
+			}
+			internalId := agent.SchoolInfo.InternalSchoolId
+			studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+			agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile)
+			teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+
+			agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile)
+			// wg2.Done()
+		}(info)
+
+		// saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
+		// if err != nil {
+		// 	utils.ErrLog.Printf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err)
+		// 	continue
+		// }
+		// studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+
+		// agent.SaveContent(agent.SchoolInfo.GenStudentExelUrl(), studentFile)
+		// teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+
+		// agent.SaveContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
+		// classes (test)
+		// agent.GenClassesInfo()
+		// agent.GetClassInfoById()
+
+	}
+	wg2.Wait()
+	utils.StdLog.Println("FINISH! byebyeﾉｼ")
+	bufio.NewScanner(os.Stdin).Scan()
+	os.Exit(1)
 
 	// フォルダ名 なんでもいいけど日付にしてる
 	ct := time.Now().Format("2006_01_02")
