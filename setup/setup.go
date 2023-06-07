@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gocarina/gocsv"
-	"github.com/halllllll/loilo_gluttony/v2/loilo"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
 
 	"github.com/spkg/bom"
@@ -27,7 +26,7 @@ type Project struct {
 	DataDirName  string
 	DataFileName string
 	LogFileName  string
-	SaveDirName  string
+	SaveDirRoot  string
 }
 
 func NewProject() *Project {
@@ -39,7 +38,11 @@ func NewProject() *Project {
 }
 
 // ファイルの確認・中身の返却と保存用フォルダの作成
-func (proj *Project) Hello(vd *embed.FS) ([]loilo.SchoolInfo, error) {
+func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
+	cd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("erro get wd - %w", err)
+	}
 	if _, err := os.Stat(filepath.Join(proj.DataDirName, proj.DataFileName)); err != nil {
 		return nil, fmt.Errorf("file not found - %w", err)
 	}
@@ -52,37 +55,24 @@ func (proj *Project) Hello(vd *embed.FS) ([]loilo.SchoolInfo, error) {
 	if err := gocsv.UnmarshalBytes(bom.Clean(buf), &loginrecords); err != nil {
 		return nil, fmt.Errorf("error read csv - %w", err)
 	}
-	saveTo, err := createSaveDirectory(ct())
+
+	saveTo, err := CreateSaveDirectory(filepath.Join(cd, ct()))
 	if err != nil {
 		return nil, fmt.Errorf("error create save dir - %w", err)
 	}
 
-	fmt.Printf("created? %s\n", saveTo)
-	proj.SaveDirName = saveTo
-	schools := make([]loilo.SchoolInfo, len(loginrecords))
-	for i, r := range loginrecords {
-		schools[i] = loilo.SchoolInfo{
-			Name:    r.SchoolName,
-			Id:      r.SchoolId,
-			AdminId: r.AdminId,
-			AdminPw: r.AdminPw,
-		}
-	}
-	return schools, nil
+	proj.SaveDirRoot = saveTo
+	return loginrecords, nil
 }
 
-func createSaveDirectory(target string) (string, error) {
-	cd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("error GetWd - %w ", err)
-	}
+func CreateSaveDirectory(targetPath string) (string, error) {
 	var fileNum = 1
-	var fileName = target
+	var fileName = targetPath
 	for {
 		if _, err := os.Stat(fileName); err != nil {
 			err = os.Mkdir(fileName, os.ModePerm)
 			if err != nil && !os.IsExist(err) {
-				t := time.Duration(rand.Int63n(1)) * time.Microsecond
+				t := time.Duration(rand.Float64()) * time.Microsecond
 				utils.ErrLog.Printf("error mkdir: %s\n -- rechalenge after '%s' (microsecond)...", t, err)
 				time.Sleep(t)
 				continue
@@ -91,10 +81,9 @@ func createSaveDirectory(target string) (string, error) {
 
 		} else {
 			fileNum += 1
-			fileName = fmt.Sprintf("%s_%d", target, fileNum)
+			fileName = fmt.Sprintf("%s_%d", targetPath, fileNum)
 			continue
 		}
 	}
-	directory := filepath.FromSlash(cd + "/" + fileName)
-	return directory, nil
+	return fileName, nil
 }

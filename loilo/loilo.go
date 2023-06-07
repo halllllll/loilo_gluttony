@@ -10,20 +10,20 @@ var (
 	Home  = fmt.Sprintf("%s/dashboard", Host)
 	// classes      = fmt.Sprintf("%s/user_groups", host)
 	// graduates    = fmt.Sprintf("%s/students?graduated=1", host)
-	// studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
-	// teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
+	studentsXlsx = func(id int) string { return fmt.Sprintf("%s/schools/%d/students.xlsx", Host, id) }
+	teachersXlsx = func(id int) string { return fmt.Sprintf("%s/schools/%d/teachers.xlsx", Host, id) }
 )
 
 type SchoolInfo struct {
 	Name             string
-	Id               string
-	AdminId          string
-	AdminPw          string
 	InternalSchoolId int
 }
 
 func (si *SchoolInfo) GenStudentExelUrl() string {
-	return fmt.Sprintf("%s/schools/%d/students.xlsx", Host, si.InternalSchoolId)
+	return studentsXlsx(si.InternalSchoolId)
+}
+func (si *SchoolInfo) GenTeacherExelUrl() string {
+	return teachersXlsx(si.InternalSchoolId)
 }
 
 func (si *SchoolInfo) GenClassURL() string {

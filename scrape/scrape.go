@@ -10,6 +10,7 @@ import (
 
 	"github.com/gocolly/colly"
 	"github.com/halllllll/loilo_gluttony/v2/loilo"
+	"github.com/halllllll/loilo_gluttony/v2/setup"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
 )
 
@@ -24,7 +25,21 @@ var (
 	ua = func() string { return uas[rand.Intn(len(uas))] }
 )
 
-func Login(schoolInfo *loilo.SchoolInfo) (*colly.Collector, error) {
+type ScrapeAgent struct {
+	Collector  *colly.Collector
+	SchoolInfo *loilo.SchoolInfo
+	Project    *setup.Project
+}
+
+func (agent *ScrapeAgent) SetProject(proj *setup.Project) {
+	agent.Project = proj
+}
+
+func Login(loginInfo *setup.LoginRecord) (*ScrapeAgent, error) {
+
+	school := &loilo.SchoolInfo{
+		Name: loginInfo.SchoolName,
+	}
 
 	c := colly.NewCollector(
 		colly.AllowedDomains("n.loilo.tv"),
@@ -49,12 +64,12 @@ func Login(schoolInfo *loilo.SchoolInfo) (*colly.Collector, error) {
 				return
 			}
 			success = true
-			schoolInfo.InternalSchoolId = id
+			school.InternalSchoolId = id
 		}
 	})
 	c.OnHTML("li.dropdown-header:nth-child(1)", func(e *colly.HTMLElement) {
 		if success {
-			if !strings.Contains(e.Text, schoolInfo.Name) {
+			if !strings.Contains(e.Text, loginInfo.SchoolName) {
 				success = false
 			}
 		}
@@ -62,9 +77,9 @@ func Login(schoolInfo *loilo.SchoolInfo) (*colly.Collector, error) {
 
 	// login
 	err := c.Post(loilo.Entry, map[string]string{
-		"user[school][code]": schoolInfo.Id,
-		"user[username]":     schoolInfo.AdminId,
-		"user[password]":     schoolInfo.AdminPw,
+		"user[school][code]": loginInfo.SchoolId,
+		"user[username]":     loginInfo.AdminId,
+		"user[password]":     loginInfo.AdminPw,
 		"commit":             "ログイン",
 	})
 	if err != nil {
@@ -79,21 +94,36 @@ func Login(schoolInfo *loilo.SchoolInfo) (*colly.Collector, error) {
 		err := fmt.Errorf("can't login (or, login data is invalid, ex: schoolname) - ")
 		return nil, err
 	}
-	return c, nil
+	agent := &ScrapeAgent{
+		Collector:  c.Clone(),
+		SchoolInfo: school,
+	}
+	return agent, nil
 }
 
-func GetContent(schoolInfo *loilo.SchoolInfo, c *colly.Collector) {
-	// 試しに取得してみる
-	c.OnResponse(func(r *colly.Response) {
-		fmt.Println("gacha!")
-		fmt.Println(r.StatusCode)
-		fmt.Println("./" + r.FileName())
-		if err := r.Save(r.FileName()); err != nil {
-			fmt.Printf("save error ... %s\n", err)
+func (agent *ScrapeAgent) SaveAsExcel(content [][]string, filePath string) {
+
+}
+
+func (agent *ScrapeAgent) GetContent(url, filePath string) error {
+	var success bool
+
+	agent.Collector.OnResponse(func(r *colly.Response) {
+		if r.StatusCode != 200 {
+			utils.ErrLog.Printf("cant access %s - statuscode: %d\n", url, r.StatusCode)
+			success = false
+			return
 		}
-		fmt.Println("done?")
+		if err := r.Save(filePath); err != nil {
+			fmt.Printf("save error ... %s\n", err)
+			return
+		}
+		success = true
 	})
-	fmt.Printf("goto %s\n", schoolInfo.GenStudentExelUrl())
-	c.Visit(schoolInfo.GenStudentExelUrl())
-	c.Wait()
+	agent.Collector.Visit(url)
+	agent.Collector.Wait()
+	if !success {
+		return fmt.Errorf("failed get content %s on %s ", agent.SchoolInfo.Name, url)
+	}
+	return nil
 }

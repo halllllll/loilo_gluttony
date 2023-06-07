@@ -81,11 +81,7 @@ func (loilo *LoiloClient) GetClasses(url string) (result [][]string, err error) 
 	if err != nil {
 		return
 	}
-	fmt.Println("ちなレスポンス")
-	fmt.Printf("Status: %s\n", res.Status)
-	fmt.Printf("body: %v\nんぉ〜〜〜\n%#v\n", res.Body, res.Body)
 	defer res.Body.Close()
-
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		return
@@ -462,23 +458,31 @@ func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "開始しちゃうよ～")
 	proj := setup.NewProject()
-	schoolInfo, err := proj.Hello(&LoginInfo)
+	loginInfo, err := proj.Hello(&LoginInfo)
 	if err != nil {
 		fmt.Println("エラー？")
 		utils.ErrLog.Println(err)
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
 	} else {
-		utils.StdLog.Println("save folder: ", proj.SaveDirName)
-		for _, school := range schoolInfo {
-			fmt.Println(school)
-			c, err := scrape.Login(&school)
+		utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
+		for _, info := range loginInfo {
+			agent, err := scrape.Login(&info)
+			agent.SetProject(proj)
 			if err != nil {
 				fmt.Println(err)
 			} else {
-				fmt.Printf("internal id: %d\n", school.InternalSchoolId)
-				thisC := c.Clone()
-				scrape.GetContent(&school, thisC)
+				fmt.Printf("internal id: %d\n", agent.SchoolInfo.InternalSchoolId)
+				saveDir, err := setup.CreateSaveDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
+				if err != nil {
+					utils.ErrLog.Printf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err)
+					continue
+				}
+				studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+				agent.GetContent(agent.SchoolInfo.GenStudentExelUrl(), studentFile)
+				teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+				agent.GetContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
+
 			}
 		}
 
