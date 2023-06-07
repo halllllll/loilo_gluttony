@@ -166,3 +166,25 @@ func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
 	c.Wait()
 	return nil
 }
+
+func (agent *ScrapeAgent) TouchYou(url string) {
+	c := *agent.Collector.Clone()
+
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println(string(r.Body))
+	})
+
+	// c.OnHTML("#app-props", func(e *colly.HTMLElement) {
+	// 	data := e.Attr("data-props")
+	// 	if err := json.Unmarshal([]byte(data), &props); err != nil {
+	// 		errMsg += fmt.Sprintf("unmarshall error:\n%s\n", err)
+	// 		return
+	// 	}
+	// })
+
+	c.Wait()
+	if err := c.Visit(url); err != nil {
+		fmt.Println()
+	}
+	c.Wait()
+}

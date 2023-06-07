@@ -485,8 +485,9 @@ func main() {
 				// agent.SaveContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
 				// classes (test)
 				// agent.GenClassesInfo()
+				// agent.GetClassInfoById()
 
-				agent.GetClassInfoById(2063041)
+				agent.TouchYou("https://n.loilo.tv/subjects?force_all=1")
 			}
 		}
 
