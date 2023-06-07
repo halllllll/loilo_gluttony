@@ -12,6 +12,7 @@ var (
 	// graduates    = fmt.Sprintf("%s/students?graduated=1", host)
 	studentsXlsx = func(id int) string { return fmt.Sprintf("%s/schools/%d/students.xlsx", Host, id) }
 	teachersXlsx = func(id int) string { return fmt.Sprintf("%s/schools/%d/teachers.xlsx", Host, id) }
+	class        = func(id int) string { return fmt.Sprintf("%s/user_groups/%d/memberships", Host, id) }
 )
 
 type SchoolInfo struct {
@@ -37,17 +38,18 @@ type ClassInfo struct {
 	Students []StudentInfo
 }
 
-func (si *SchoolInfo) GenClassArch() {
-
+func GenStudentExelUrl(internalSchoolId int) string {
+	return studentsXlsx(internalSchoolId)
 }
 
-func (si *SchoolInfo) GenStudentExelUrl() string {
-	return studentsXlsx(si.InternalSchoolId)
-}
-func (si *SchoolInfo) GenTeacherExelUrl() string {
-	return teachersXlsx(si.InternalSchoolId)
+func GenTeacherExelUrl(internalSchoolId int) string {
+	return teachersXlsx(internalSchoolId)
 }
 
-func (si *SchoolInfo) GenClassURL() string {
+func GenClassListUrl() string {
 	return classes()
+}
+
+func GenClassUrl(groupId int) string {
+	return class(groupId)
 }

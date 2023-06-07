@@ -483,9 +483,10 @@ func main() {
 				// teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
 
 				// agent.SaveContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
-				fmt.Println("class info?")
-				agent.GenClassInfo()
+				// classes (test)
+				// agent.GenClassesInfo()
 
+				agent.GetClassInfoById(2063041)
 			}
 		}
 

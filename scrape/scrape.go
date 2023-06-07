@@ -1,6 +1,7 @@
 package scrape
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -100,48 +101,68 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 	return agent, nil
 }
 
-func (agent *ScrapeAgent) SaveAsExcel(content [][]string, filePath string) {
-
-}
-
-func (agent *ScrapeAgent) GenClassInfo() error {
+func (agent *ScrapeAgent) GenClassesInfo() error {
+	var props loilo.ClassListProps
+	var errMsg string
 	c := *agent.Collector.Clone()
-	c.OnResponse(func(r *colly.Response) {
-		fmt.Println(r.StatusCode, r.Request.URL)
-		fmt.Println(string(r.Body))
-	})
+	groupId := agent.SchoolInfo.InternalSchoolId
 
 	c.OnHTML("#app-props", func(e *colly.HTMLElement) {
-		fmt.Println("table~~~")
-		fmt.Println(e.Attr("data-props"))
+		data := e.Attr("data-props")
+		if err := json.Unmarshal([]byte(data), &props); err != nil {
+			errMsg += fmt.Sprintf("unmarshall error:\n%s\n", err)
+			return
+		}
 	})
+
 	c.Wait()
-	fmt.Printf("url~~ %s\n", agent.SchoolInfo.GenClassURL())
-	c.Visit(agent.SchoolInfo.GenClassURL())
+	if err := c.Visit(loilo.GenClassUrl(groupId)); err != nil {
+		return fmt.Errorf("error data props - %w\n%s", err, errMsg)
+	}
 	c.Wait()
+
+	return nil
+}
+
+func (agent *ScrapeAgent) GetClassInfoById(groupId int) error {
+	var props loilo.ClassProps
+	var errMsg string
+	c := *agent.Collector.Clone()
+
+	c.OnHTML("#app-props", func(e *colly.HTMLElement) {
+		data := e.Attr("data-props")
+		if err := json.Unmarshal([]byte(data), &props); err != nil {
+			errMsg += fmt.Sprintf("unmarshall error:\n%s\n", err)
+			return
+		}
+	})
+
+	c.Wait()
+	if err := c.Visit(loilo.GenClassUrl(groupId)); err != nil {
+		return fmt.Errorf("error on GenClassInfoById - %w\n%s", err, errMsg)
+	}
+	c.Wait()
+
 	return nil
 }
 
 func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
-	var success bool
+	var errMsg string
+	c := *agent.Collector.Clone()
 
-	agent.Collector.OnResponse(func(r *colly.Response) {
+	c.OnResponse(func(r *colly.Response) {
 		if r.StatusCode != 200 {
-			utils.ErrLog.Printf("cant access %s - statuscode: %d\n", url, r.StatusCode)
-			success = false
+			errMsg += fmt.Sprintf("cant access %s - statuscode: %d\n", url, r.StatusCode)
 			return
 		}
 		if err := r.Save(filePath); err != nil {
-			utils.ErrLog.Printf("error save content - %s", err)
-			success = false
+			errMsg += fmt.Sprintf("error save content - %s", err)
 			return
 		}
-		success = true
 	})
-	agent.Collector.Visit(url)
-	agent.Collector.Wait()
-	if !success {
-		return fmt.Errorf("failed get content %s on %s", agent.SchoolInfo.Name, url)
+	if err := c.Visit(url); err != nil {
+		return fmt.Errorf("failed get content %s - \n %s \n %w -", agent.SchoolInfo.Name, errMsg, err)
 	}
+	c.Wait()
 	return nil
 }
