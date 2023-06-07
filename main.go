@@ -467,21 +467,24 @@ func main() {
 	} else {
 		utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
 		for _, info := range loginInfo {
-			agent, err := scrape.Login(&info)
-			agent.SetProject(proj)
+			agent, err := scrape.Login(&info, proj)
 			if err != nil {
 				fmt.Println(err)
 			} else {
 				fmt.Printf("internal id: %d\n", agent.SchoolInfo.InternalSchoolId)
-				saveDir, err := setup.CreateSaveDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
-				if err != nil {
-					utils.ErrLog.Printf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err)
-					continue
-				}
-				studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-				agent.GetContent(agent.SchoolInfo.GenStudentExelUrl(), studentFile)
-				teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
-				agent.GetContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
+				// saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
+				// if err != nil {
+				// 	utils.ErrLog.Printf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err)
+				// 	continue
+				// }
+				// studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+
+				// agent.SaveContent(agent.SchoolInfo.GenStudentExelUrl(), studentFile)
+				// teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+
+				// agent.SaveContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
+				fmt.Println("class info?")
+				agent.GenClassInfo()
 
 			}
 		}

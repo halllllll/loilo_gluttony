@@ -31,11 +31,7 @@ type ScrapeAgent struct {
 	Project    *setup.Project
 }
 
-func (agent *ScrapeAgent) SetProject(proj *setup.Project) {
-	agent.Project = proj
-}
-
-func Login(loginInfo *setup.LoginRecord) (*ScrapeAgent, error) {
+func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, error) {
 
 	school := &loilo.SchoolInfo{
 		Name: loginInfo.SchoolName,
@@ -67,9 +63,11 @@ func Login(loginInfo *setup.LoginRecord) (*ScrapeAgent, error) {
 			school.InternalSchoolId = id
 		}
 	})
+
 	c.OnHTML("li.dropdown-header:nth-child(1)", func(e *colly.HTMLElement) {
 		if success {
 			if !strings.Contains(e.Text, loginInfo.SchoolName) {
+				utils.ErrLog.Printf("error not container %s on html\n", loginInfo.SchoolName)
 				success = false
 			}
 		}
@@ -91,13 +89,14 @@ func Login(loginInfo *setup.LoginRecord) (*ScrapeAgent, error) {
 	c.Wait()
 
 	if !success {
-		err := fmt.Errorf("can't login (or, login data is invalid, ex: schoolname) - ")
-		return nil, err
+		return nil, fmt.Errorf("can't login (or, login data is invalid, ex: schoolname) - ")
 	}
 	agent := &ScrapeAgent{
 		Collector:  c.Clone(),
 		SchoolInfo: school,
+		Project:    project,
 	}
+	fmt.Println(agent.Project.SaveDirRoot, agent.Project.DataDirName)
 	return agent, nil
 }
 
@@ -105,7 +104,25 @@ func (agent *ScrapeAgent) SaveAsExcel(content [][]string, filePath string) {
 
 }
 
-func (agent *ScrapeAgent) GetContent(url, filePath string) error {
+func (agent *ScrapeAgent) GenClassInfo() error {
+	c := *agent.Collector.Clone()
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println(r.StatusCode, r.Request.URL)
+		fmt.Println(string(r.Body))
+	})
+
+	c.OnHTML("#app-props", func(e *colly.HTMLElement) {
+		fmt.Println("table~~~")
+		fmt.Println(e.Attr("data-props"))
+	})
+	c.Wait()
+	fmt.Printf("url~~ %s\n", agent.SchoolInfo.GenClassURL())
+	c.Visit(agent.SchoolInfo.GenClassURL())
+	c.Wait()
+	return nil
+}
+
+func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
 	var success bool
 
 	agent.Collector.OnResponse(func(r *colly.Response) {
@@ -115,7 +132,8 @@ func (agent *ScrapeAgent) GetContent(url, filePath string) error {
 			return
 		}
 		if err := r.Save(filePath); err != nil {
-			fmt.Printf("save error ... %s\n", err)
+			utils.ErrLog.Printf("error save content - %s", err)
+			success = false
 			return
 		}
 		success = true
@@ -123,7 +141,7 @@ func (agent *ScrapeAgent) GetContent(url, filePath string) error {
 	agent.Collector.Visit(url)
 	agent.Collector.Wait()
 	if !success {
-		return fmt.Errorf("failed get content %s on %s ", agent.SchoolInfo.Name, url)
+		return fmt.Errorf("failed get content %s on %s", agent.SchoolInfo.Name, url)
 	}
 	return nil
 }

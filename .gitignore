@@ -1,5 +1,7 @@
 *.csv
 *.log
+*.json
+*.js
 tmp/
 sandbox*
 *.xlsx

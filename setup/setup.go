@@ -56,7 +56,7 @@ func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
 		return nil, fmt.Errorf("error read csv - %w", err)
 	}
 
-	saveTo, err := CreateSaveDirectory(filepath.Join(cd, ct()))
+	saveTo, err := CreateDirectory(filepath.Join(cd, ct()))
 	if err != nil {
 		return nil, fmt.Errorf("error create save dir - %w", err)
 	}
@@ -65,7 +65,7 @@ func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
 	return loginrecords, nil
 }
 
-func CreateSaveDirectory(targetPath string) (string, error) {
+func CreateDirectory(targetPath string) (string, error) {
 	var fileNum = 1
 	var fileName = targetPath
 	for {
