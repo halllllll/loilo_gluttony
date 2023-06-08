@@ -17,16 +17,21 @@ import (
 )
 
 var (
-	err     error
+	// for excel sheet
 	ngChars = []rune{'/', ':', '?', '*', '[', ']', ' '}
 
 	red    = color.New(color.Bold, color.FgHiRed)
 	yellow = color.New(color.Bold, color.FgHiYellow)
 	green  = color.New(color.Bold, color.FgHiGreen)
-)
 
-//go:embed notify.png
-var notifyImg embed.FS
+	//go:embed info/*
+	LoginInfo embed.FS
+	//go:embed notify.png
+	notifyImg embed.FS
+
+	proj         *setup.Project
+	loginRecords *[]setup.LoginRecord
+)
 
 type Notify interface {
 	ShowNotify(title, message string)
@@ -38,12 +43,6 @@ func (d DesktopNotify) ShowNotify(title, message string) {
 	fileInfo, _ := img.Stat()
 	beeep.Notify(title, message, fileInfo.Name())
 }
-
-//go:embed info/*
-var LoginInfo embed.FS
-
-var proj *setup.Project
-var loginRecords *[]setup.LoginRecord
 
 func init() {
 	// 最低限プログラムを走らせることができるか確認 and 準備
@@ -75,6 +74,10 @@ func main() {
 			utils.ErrLog.Println(red.Sprintln(err))
 		}
 	}()
+
+	// 並行　メニュー
+	// TODO
+
 	for _, record := range *loginRecords {
 		wg.Add(1)
 		go func(data setup.LoginRecord) {
