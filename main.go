@@ -40,9 +40,9 @@ var (
 	graduates    = fmt.Sprintf("%s/students?graduated=1", host)
 	studentsXlsx = fmt.Sprintf("%s/students.xlsx", host)
 	teachersXlsx = fmt.Sprintf("%s/teachers.xlsx", host)
-	red          = color.New(color.Bold, color.BgHiBlack, color.FgHiRed)
-	yellow       = color.New(color.Bold, color.BgHiBlack, color.FgHiYellow)
-	green        = color.New(color.Bold, color.BgHiBlack, color.FgHiGreen)
+	red          = color.New(color.Bold, color.FgHiRed)
+	yellow       = color.New(color.Bold, color.FgHiYellow)
+	green        = color.New(color.Bold, color.FgHiGreen)
 )
 
 func Ua() (ua string) {
@@ -452,15 +452,17 @@ func (d DesktopNotify) ShowNotify(title, message string) {
 //go:embed info/*
 var LoginInfo embed.FS
 
+var proj *setup.Project
+
 func init() {
-	utils.LoggingSetting("love.log")
+	proj = setup.NewProject()
+	utils.LoggingSetting(proj.LogFileName)
 	// ほかにもファイルとかは先に読んでおいたほうがいいのではないかという気がする
 }
 
 func main() {
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "START")
-	proj := setup.NewProject()
 	loginInfo, err := proj.Hello(&LoginInfo)
 	if err != nil {
 		utils.ErrLog.Println(red.Sprintln("CANT START PROJECT."))
@@ -470,49 +472,63 @@ func main() {
 	}
 	utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
 
-	var wg2 sync.WaitGroup
+	var wg sync.WaitGroup
+	var logined int
+	cantLogined := make([]setup.LoginRecord, 0)
+	errCh := make(chan error)
+	go func() {
+		for err := range errCh {
+			utils.ErrLog.Println(red.Sprintln(err))
+		}
+	}()
 	for _, info := range loginInfo {
-		wg2.Add(1)
+		wg.Add(1)
 		go func(data setup.LoginRecord) {
-			defer wg2.Done()
+			defer wg.Done()
 			agent, err := scrape.Login(&data, proj)
 			if err != nil {
-				utils.ErrLog.Println(red.Sprintf("[%s] - failed to login - %s", data.SchoolName, err))
+				errCh <- fmt.Errorf("[%s] - failed to login - %w", data.SchoolName, err)
+				cantLogined = append(cantLogined, data)
 				return
 			}
-			utils.StdLog.Println(green.Sprintf("%s - START\n", agent.SchoolInfo.Name))
+			logined++
+			utils.StdLog.Println(green.Sprintf("%s - START", agent.SchoolInfo.Name))
 
 			saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
 			if err != nil {
-				utils.ErrLog.Println(red.Sprintf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err))
+				errCh <- fmt.Errorf("failed create save dir for %s - %s", agent.SchoolInfo.Name, err)
 				return
 			}
 			internalId := agent.SchoolInfo.InternalSchoolId
 			studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-			agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile)
-			teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+			if err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile); err != nil {
+				errCh <- fmt.Errorf("failed saving STUDENT content on %s - %w", agent.SchoolInfo.Name, err)
+				return
 
-			agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile)
-			// wg2.Done()
+			}
+			teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+			if err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile); err != nil {
+				errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
+				return
+			}
 		}(info)
 
-		// saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
-		// if err != nil {
-		// 	utils.ErrLog.Printf("failed create save dir for %s - %s\n", agent.SchoolInfo.Name, err)
-		// 	continue
-		// }
-		// studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-
-		// agent.SaveContent(agent.SchoolInfo.GenStudentExelUrl(), studentFile)
-		// teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
-
-		// agent.SaveContent(agent.SchoolInfo.GenTeacherExelUrl(), teacherFile)
-		// classes (test)
+		// output classes (test)
 		// agent.GenClassesInfo()
 		// agent.GetClassInfoById()
 
 	}
-	wg2.Wait()
+
+	wg.Wait()
+	utils.InfoLog.Printf("login successed -  %d/%d (%f)", logined, len(loginInfo),
+		float64(float64(logined)/float64(len(loginInfo))))
+	if len(loginInfo) != logined {
+		utils.InfoLog.Println(yellow.Sprintln("PLEASE CHECK CAN'T LOGIN SCHOOL INFORMATION"))
+		for idx, r := range cantLogined {
+			utils.InfoLog.Println(yellow.Sprintf("%d --- %s(%s)", idx+1, r.SchoolName, r.SchoolId))
+		}
+	}
+
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
 	os.Exit(1)
@@ -530,7 +546,7 @@ func main() {
 	if err != nil {
 		utils.ErrLog.Println(red.Sprint(err))
 	}
-	var wg sync.WaitGroup
+	var wg2 sync.WaitGroup
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -570,9 +586,9 @@ func main() {
 				UserId: record[2],
 				UserPw: record[3],
 			}
-			wg.Add(1)
+			wg2.Add(1)
 			go func() {
-				defer wg.Done()
+				defer wg2.Done()
 				// defer DesktopNotify{}.ShowNotify(fmt.Sprintf("%s !!", school.Name), "学校単位では終わったよ～")
 				defer DesktopNotify{}.ShowNotify(school.Name, "おわったよ～")
 
@@ -585,7 +601,7 @@ func main() {
 			idx++
 		}
 	}
-	wg.Wait()
+	wg2.Wait()
 
 	// DesktopNotify{}.ShowNotify("BIG LOVE", "おつかれ～～！！ばいば～～い")
 

@@ -64,10 +64,10 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 			school.InternalSchoolId = id
 		}
 	})
-
-	c.OnHTML("li.dropdown-header:nth-child(1)", func(e *colly.HTMLElement) {
+	// 2023/06/08
+	c.OnHTML(".text-muted", func(e *colly.HTMLElement) {
 		if success {
-			if !strings.Contains(e.Text, loginInfo.SchoolName) {
+			if !strings.Contains(e.Text, "管理者メニュー") {
 				utils.ErrLog.Printf("error not container %s on html\n", loginInfo.SchoolName)
 				success = false
 			}
@@ -90,7 +90,7 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 	c.Wait()
 
 	if !success {
-		return nil, fmt.Errorf("can't login (or, login data is invalid, ex: schoolname) - ")
+		return nil, fmt.Errorf("can't login (login data is invalid, or, changed HTML arch, especially ？？？？？？・・) - ")
 	}
 	agent := &ScrapeAgent{
 		Collector:  c.Clone(),
