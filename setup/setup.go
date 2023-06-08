@@ -43,10 +43,11 @@ func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("erro get wd - %w", err)
 	}
-	if _, err := os.Stat(filepath.Join(proj.DataDirName, proj.DataFileName)); err != nil {
+	target := filepath.ToSlash(filepath.Join(proj.DataDirName, proj.DataFileName))
+	if _, err := os.Stat(target); err != nil {
 		return nil, fmt.Errorf("file not found - %w", err)
 	}
-	buf, err := vd.ReadFile(filepath.Join(proj.DataDirName, proj.DataFileName))
+	buf, err := vd.ReadFile(target)
 	if err != nil {
 		return nil, fmt.Errorf("error read file %w", err)
 	}
