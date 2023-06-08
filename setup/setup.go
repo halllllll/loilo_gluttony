@@ -38,7 +38,7 @@ func NewProject() *Project {
 }
 
 // ファイルの確認・中身の返却と保存用フォルダの作成
-func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
+func (proj *Project) Hello(vd *embed.FS) (*[]LoginRecord, error) {
 	cd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("erro get wd - %w", err)
@@ -63,7 +63,7 @@ func (proj *Project) Hello(vd *embed.FS) ([]LoginRecord, error) {
 	}
 
 	proj.SaveDirRoot = saveTo
-	return loginrecords, nil
+	return &loginrecords, nil
 }
 
 func CreateDirectory(targetPath string) (string, error) {
