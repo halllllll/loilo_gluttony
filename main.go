@@ -95,17 +95,31 @@ func main() {
 				errCh <- fmt.Errorf("failed create save dir for %s - %s", agent.SchoolInfo.Name, err)
 				return
 			}
-			internalId := agent.SchoolInfo.InternalSchoolId
-			studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-			if err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile); err != nil {
-				errCh <- fmt.Errorf("failed saving STUDENT content on %s - %w", agent.SchoolInfo.Name, err)
-				return
 
-			}
-			teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
-			if err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile); err != nil {
-				errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
-				return
+			internalId := agent.SchoolInfo.InternalSchoolId
+
+			// TODO: SHOULD BE MATOMO BRAIN
+			var subWg sync.WaitGroup
+			subWg.Add(2)
+			{
+				// ONE
+				go func() {
+					defer subWg.Done()
+					studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+					if err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile); err != nil {
+						errCh <- fmt.Errorf("failed saving STUDENT content on %s - %w", agent.SchoolInfo.Name, err)
+						return
+					}
+				}()
+				// TWO
+				go func() {
+					defer subWg.Done()
+					teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+					if err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile); err != nil {
+						errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
+						return
+					}
+				}()
 			}
 		}(record)
 
