@@ -453,45 +453,47 @@ func (d DesktopNotify) ShowNotify(title, message string) {
 var LoginInfo embed.FS
 
 var proj *setup.Project
+var loginRecords []setup.LoginRecord
 
 func init() {
+	// 最低限プログラムを走らせることができるか確認 and 準備
 	proj = setup.NewProject()
 	utils.LoggingSetting(proj.LogFileName)
-	// ほかにもファイルとかは先に読んでおいたほうがいいのではないかという気がする
-}
-
-func main() {
-
-	DesktopNotify{}.ShowNotify("BIG LOVE", "START")
-	loginInfo, err := proj.Hello(&LoginInfo)
+	loginRecords, err = proj.Hello(&LoginInfo)
 	if err != nil {
 		utils.ErrLog.Println(red.Sprintln("CANT START PROJECT."))
 		utils.ErrLog.Println(red.Sprintln((err)))
 		bufio.NewScanner(os.Stdin).Scan()
 		os.Exit(1)
 	}
+	DesktopNotify{}.ShowNotify("BIG LOVE", "START")
 	utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
 
+	// ほかにも必要なファイルとか構造体は先に生成したり参照できるようにしとくといい気がする
+}
+
+func main() {
+
 	var wg sync.WaitGroup
-	var logined int
-	cantLogined := make([]setup.LoginRecord, 0)
+	failedLoginRecords := make([]setup.LoginRecord, 0)
+
+	// 後続のgoroutine内のエラーハンドリング　全部ここ
 	errCh := make(chan error)
 	go func() {
 		for err := range errCh {
 			utils.ErrLog.Println(red.Sprintln(err))
 		}
 	}()
-	for _, info := range loginInfo {
+	for _, record := range loginRecords {
 		wg.Add(1)
 		go func(data setup.LoginRecord) {
 			defer wg.Done()
 			agent, err := scrape.Login(&data, proj)
 			if err != nil {
 				errCh <- fmt.Errorf("[%s] - failed to login - %w", data.SchoolName, err)
-				cantLogined = append(cantLogined, data)
+				failedLoginRecords = append(failedLoginRecords, data)
 				return
 			}
-			logined++
 			utils.StdLog.Println(green.Sprintf("%s - START", agent.SchoolInfo.Name))
 
 			saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
@@ -511,24 +513,25 @@ func main() {
 				errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
 				return
 			}
-		}(info)
+		}(record)
 
-		// output classes (test)
+		// output classes props info (test)
 		// agent.GenClassesInfo()
 		// agent.GetClassInfoById()
 
 	}
 
 	wg.Wait()
-	utils.InfoLog.Printf("login successed -  %d/%d (%f)", logined, len(loginInfo),
-		float64(float64(logined)/float64(len(loginInfo))))
-	if len(loginInfo) != logined {
+	// ごちゃごちゃしているが、ログインできた率とできなかった情報を出しているだけ
+	utils.InfoLog.Printf("login successed -  %d/%d (%f)", len(failedLoginRecords), len(loginRecords),
+		float64(float64(len(failedLoginRecords))/float64(len(loginRecords))))
+	if len(loginRecords) != len(failedLoginRecords) {
 		utils.InfoLog.Println(yellow.Sprintln("PLEASE CHECK CAN'T LOGIN SCHOOL INFORMATION"))
-		for idx, r := range cantLogined {
+		for idx, r := range failedLoginRecords {
 			utils.InfoLog.Println(yellow.Sprintf("%d --- %s(%s)", idx+1, r.SchoolName, r.SchoolId))
 		}
 	}
-
+	DesktopNotify{}.ShowNotify("BIG LOVE", "OVER!!!!!!!")
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
 	os.Exit(1)

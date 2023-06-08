@@ -65,9 +65,10 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 		}
 	})
 	// 2023/06/08
+	adminViewText := "管理者メニュー"
 	c.OnHTML(".text-muted", func(e *colly.HTMLElement) {
 		if success {
-			if !strings.Contains(e.Text, "管理者メニュー") {
+			if !strings.Contains(e.Text, adminViewText) {
 				utils.ErrLog.Printf("error not container %s on html\n", loginInfo.SchoolName)
 				success = false
 			}
@@ -90,7 +91,7 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 	c.Wait()
 
 	if !success {
-		return nil, fmt.Errorf("can't login (login data is invalid, or, changed HTML arch, especially ？？？？？？・・) - ")
+		return nil, fmt.Errorf("can't login (login data is invalid, or, changed HTML arch, especially '%s' ) - ", adminViewText)
 	}
 	agent := &ScrapeAgent{
 		Collector:  c.Clone(),
@@ -100,6 +101,10 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 	return agent, nil
 }
 
+// WIP
+// 全クラス情報を取得
+// （所属しているアカウントは含まず、クラスのみ）
+// -> loilo.ClassListProps
 func (agent *ScrapeAgent) GenClassesInfo() error {
 	var props loilo.ClassListProps
 	var errMsg string
@@ -123,6 +128,9 @@ func (agent *ScrapeAgent) GenClassesInfo() error {
 	return nil
 }
 
+// WIP
+// 各クラスごとのデータを取得
+// -> loilo.ClassProps
 func (agent *ScrapeAgent) GetClassInfoById(groupId int) error {
 	var props loilo.ClassProps
 	var errMsg string
@@ -145,6 +153,7 @@ func (agent *ScrapeAgent) GetClassInfoById(groupId int) error {
 	return nil
 }
 
+// URL先のコンテンツを決められた形式（filePath）で保存
 func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
 	var errMsg string
 	c := *agent.Collector.Clone()
@@ -166,6 +175,7 @@ func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
 	return nil
 }
 
+// this is only for IN-DEV func
 func (agent *ScrapeAgent) TouchSample(url string) {
 	c := *agent.Collector.Clone()
 
