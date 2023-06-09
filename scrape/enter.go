@@ -53,18 +53,25 @@ func (info *toEnterInfo) knock(landMarkText string) (*ScrapeAgent, error) {
 	})
 
 	// login
-	err := c.Post(loilo.Entry, map[string]string{
-		"user[school][code]": info.record.SchoolId,
-		"user[username]":     info.record.AdminId,
-		"user[password]":     info.record.AdminPw,
-		"commit":             "ログイン",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("login error - %w", err)
+	login := func() error {
+		err := c.Post(loilo.Entry, map[string]string{
+			"user[school][code]": info.record.SchoolId,
+			"user[username]":     info.record.AdminId,
+			"user[password]":     info.record.AdminPw,
+			"commit":             "ログイン",
+		})
+		if err != nil {
+			return fmt.Errorf("login error - %w", err)
+		}
+		c.Wait()
+		// let's visiting!
+		c.Visit(loilo.Home)
+		return nil
 	}
-	c.Wait()
-	// let's visiting!
-	c.Visit(loilo.Home)
+
+	if err := withRetry(login); err != nil {
+		return nil, fmt.Errorf("!OVER LOGIN RETRY COUNT! - %w", err)
+	}
 
 	c.Wait()
 	if !success {

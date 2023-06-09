@@ -16,6 +16,8 @@ require (
 	github.com/antchfx/htmlquery v1.3.0 // indirect
 	github.com/antchfx/xmlquery v1.3.15 // indirect
 	github.com/antchfx/xpath v1.2.3 // indirect
+	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
