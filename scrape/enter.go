@@ -52,7 +52,7 @@ func (info *toEnterInfo) knock(landMarkText string) (*ScrapeAgent, error) {
 		}
 	})
 
-	// login
+	// login operation (for Exponential BackOff)
 	login := func() error {
 		err := c.Post(loilo.Entry, map[string]string{
 			"user[school][code]": info.record.SchoolId,
@@ -69,8 +69,12 @@ func (info *toEnterInfo) knock(landMarkText string) (*ScrapeAgent, error) {
 		return nil
 	}
 
+	// Exponential BackOff
 	if err := withRetry(login); err != nil {
 		return nil, fmt.Errorf("!OVER LOGIN RETRY COUNT! - %w", err)
+	} else {
+		// TODO: ログまわりをまともにする
+		// utils.InfoLog.Printf("%s login data and POST scheme is valid!\n", school.Name)
 	}
 
 	c.Wait()
