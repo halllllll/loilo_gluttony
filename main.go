@@ -82,7 +82,7 @@ func main() {
 		wg.Add(1)
 		go func(data setup.LoginRecord) {
 			defer wg.Done()
-			agent, err := scrape.Login(&data, proj)
+			agent, err := scrape.Login(&data)
 			if err != nil {
 				errCh <- fmt.Errorf("[%s] - failed to login - %w", data.SchoolName, err)
 				failedLoginRecords = append(failedLoginRecords, data)

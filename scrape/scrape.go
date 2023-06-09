@@ -4,15 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gocolly/colly"
 	"github.com/halllllll/loilo_gluttony/v2/loilo"
 	"github.com/halllllll/loilo_gluttony/v2/setup"
-	"github.com/halllllll/loilo_gluttony/v2/utils"
 )
 
 var (
@@ -29,15 +25,9 @@ var (
 type ScrapeAgent struct {
 	Collector  *colly.Collector
 	SchoolInfo *loilo.SchoolInfo
-	Project    *setup.Project
 }
 
-func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, error) {
-
-	school := &loilo.SchoolInfo{
-		Name: loginInfo.SchoolName,
-	}
-
+func Login(loginInfo *setup.LoginRecord) (*ScrapeAgent, error) {
 	c := colly.NewCollector(
 		colly.AllowedDomains("n.loilo.tv"),
 		colly.UserAgent(ua()),
@@ -47,57 +37,12 @@ func Login(loginInfo *setup.LoginRecord, project *setup.Project) (*ScrapeAgent, 
 	c.Limit(&colly.LimitRule{
 		RandomDelay: 3 * time.Second,
 	})
-
-	success := false
-	// redirect home
-	c.OnResponse(func(r *colly.Response) {
-		reqUrl := r.Request.URL
-		pattern := regexp.MustCompile(`/schools/(\d+)/dashboard`)
-		if pattern.MatchString(reqUrl.Path) && r.StatusCode == 200 {
-			id, err := strconv.Atoi(pattern.FindStringSubmatch(reqUrl.Path)[1])
-			if err != nil {
-				success = false
-				utils.ErrLog.Printf("internal school id convert error: %s\n", err)
-				return
-			}
-			success = true
-			school.InternalSchoolId = id
-		}
-	})
-	// 2023/06/08
-	adminViewText := "管理者メニュー"
-	c.OnHTML(".text-muted", func(e *colly.HTMLElement) {
-		if success {
-			if !strings.Contains(e.Text, adminViewText) {
-				utils.ErrLog.Printf("error not container %s on html\n", loginInfo.SchoolName)
-				success = false
-			}
-		}
-	})
-
-	// login
-	err := c.Post(loilo.Entry, map[string]string{
-		"user[school][code]": loginInfo.SchoolId,
-		"user[username]":     loginInfo.AdminId,
-		"user[password]":     loginInfo.AdminPw,
-		"commit":             "ログイン",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("login error - %w", err)
+	enter := &toEnterInfo{
+		collector: c,
+		record:    loginInfo,
 	}
-	c.Wait()
-	c.Visit(loilo.Home)
+	agent, nil := enter.knock("管理者メニュー")
 
-	c.Wait()
-
-	if !success {
-		return nil, fmt.Errorf("can't login (login data is invalid, or, changed HTML arch, especially '%s' ) - ", adminViewText)
-	}
-	agent := &ScrapeAgent{
-		Collector:  c.Clone(),
-		SchoolInfo: school,
-		Project:    project,
-	}
 	return agent, nil
 }
 
