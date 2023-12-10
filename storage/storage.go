@@ -29,19 +29,21 @@ var studentWorkBookName = "student_all.xlsx"
 var teacherWorkBookName = "teacher_all.xlsx"
 
 func NewUnityExcel() *UnityExcel {
+	// prepare integrated-excel-file
 	var studentUnityExcel = excelize.NewFile()
 	var teacherUnityExcel = excelize.NewFile()
 
+	// insert integrated-excel-file
 	_, err := studentUnityExcel.NewSheet(sheetName)
 	if err != nil {
 		utils.ErrLog.Fatal(err)
 	}
-
 	_, err = teacherUnityExcel.NewSheet(sheetName)
 	if err != nil {
 		utils.ErrLog.Fatal(err)
 	}
 
+	// prepare integrated-excel-file stream
 	ssw, err := studentUnityExcel.NewStreamWriter(sheetName)
 	if err != nil {
 		utils.ErrLog.Fatal(err)
@@ -132,6 +134,7 @@ func (s *UnityExcel) AppendSSW(filePath string, schoolName string) error {
 	if err != nil {
 		return err
 	}
+	s.mu.Lock()
 	for rowIdx := 0; rows.Next(); rowIdx++ {
 		row, err := rows.Columns()
 		if err != nil {
@@ -146,15 +149,14 @@ func (s *UnityExcel) AppendSSW(filePath string, schoolName string) error {
 		for i, v := range row {
 			val[i+1] = v
 		}
-		s.mu.Lock()
 		s.curStudentSheetSWRow++
 		cell, _ := excelize.CoordinatesToCellName(1, s.curStudentSheetSWRow)
-		s.mu.Unlock()
 
 		if err := s.studentUnityExcelSW.SetRow(cell, val); err != nil {
 			return err
 		}
 	}
+	s.mu.Unlock()
 
 	return nil
 }
@@ -170,6 +172,7 @@ func (s *UnityExcel) AppendTSW(filePath string, schoolName string) error {
 	if err != nil {
 		return err
 	}
+	s.mu.Lock()
 	for rowIdx := 0; rows.Next(); rowIdx++ {
 		row, err := rows.Columns()
 		if err != nil {
@@ -184,15 +187,14 @@ func (s *UnityExcel) AppendTSW(filePath string, schoolName string) error {
 		for i, v := range row {
 			val[i+1] = v
 		}
-		s.mu.Lock()
 		s.curTeacherSheetSWRow++
 		cell, _ := excelize.CoordinatesToCellName(1, s.curTeacherSheetSWRow)
-		s.mu.Unlock()
 
 		if err := s.teacherUnityExcelSW.SetRow(cell, val); err != nil {
 			return err
 		}
 	}
+	s.mu.Unlock()
 
 	return nil
 }
