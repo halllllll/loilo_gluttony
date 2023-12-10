@@ -3,7 +3,6 @@ package scrape
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -131,7 +130,7 @@ func (agent *ScrapeAgent) DownloadAsStaticHTML(saveDir string, url string) error
 
 	// this is a only sample
 	c.OnHTML("#app-props", func(e *colly.HTMLElement) {
-		ioutil.WriteFile(filepath.Join(saveDir, "response.html"), e.Response.Body, os.ModePerm)
+		os.WriteFile(filepath.Join(saveDir, "response.html"), e.Response.Body, os.ModePerm)
 	})
 
 	if err := c.Visit(url); err != nil {

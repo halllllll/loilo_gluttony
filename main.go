@@ -96,9 +96,8 @@ func main() {
 				return
 			}
 
-			var subWg sync.WaitGroup
 			// download standard xlsx, export 「生徒一覧」 and 「先生一覧」
-			basicExportExcel(agent, saveDir, &subWg, errCh)
+			basicExportExcel(agent, saveDir, errCh)
 
 		}(record)
 
@@ -120,30 +119,47 @@ func main() {
 	os.Exit(1)
 }
 
-func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, subWg *sync.WaitGroup, errCh chan error) {
+func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, errCh chan error) {
 	internalId := agent.SchoolInfo.InternalSchoolId
-	subWg.Add(2)
 
-	// TODO: SHOULD BE MATOMO BRAIN
-	{
-		// ONE
-		go func() {
-			defer subWg.Done()
-			studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-			if err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile); err != nil {
-				errCh <- fmt.Errorf("failed saving STUDENT content on %s - %w", agent.SchoolInfo.Name, err)
-				return
+	// ONE
+	type studentExcelResult struct {
+		err error
+	}
+	studentChan := make(chan studentExcelResult)
+	defer close(studentChan)
+
+	go func(ch chan<- studentExcelResult) {
+		studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+		err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile)
+		ch <- studentExcelResult{err}
+
+	}(studentChan)
+
+	// TWO
+	type teacherExcelResult struct {
+		err error
+	}
+	teacherChan := make(chan teacherExcelResult)
+	defer close(teacherChan)
+
+	go func(ch chan<- teacherExcelResult) {
+		teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+		err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile)
+		ch <- teacherExcelResult{err}
+	}(teacherChan)
+
+	for i := 0; i < 2; i++ {
+		select {
+		case stu := <-studentChan:
+			if stu.err != nil {
+				errCh <- stu.err
 			}
-		}()
-		// TWO
-		go func() {
-			defer subWg.Done()
-			teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
-			if err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile); err != nil {
-				errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
-				return
+		case tch := <-teacherChan:
+			if tch.err != nil {
+				errCh <- tch.err
 			}
-		}()
+		}
 	}
 
 }
