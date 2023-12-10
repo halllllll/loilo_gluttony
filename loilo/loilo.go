@@ -38,6 +38,18 @@ type ClassInfo struct {
 	Students []StudentInfo
 }
 
+func StudentListSheetHeader() []interface{} {
+	return []interface{}{
+		"ユーザーID", "氏名", "ふりがな", "パスワード", "Googleのメールアドレス", "Microsoftのメールアドレス", "学年", "クラス名",
+	}
+}
+
+func TeacherListSheetHeader() []interface{} {
+	return []interface{}{
+		"ユーザーID", "氏名", "ふりがな", "パスワード", "Googleのメールアドレス", "Microsoftのメールアドレス",
+	}
+}
+
 func GenStudentExelUrl(internalSchoolId int) string {
 	return studentsXlsx(internalSchoolId)
 }

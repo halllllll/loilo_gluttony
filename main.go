@@ -13,6 +13,7 @@ import (
 	"github.com/halllllll/loilo_gluttony/v2/loilo"
 	"github.com/halllllll/loilo_gluttony/v2/scrape"
 	"github.com/halllllll/loilo_gluttony/v2/setup"
+	"github.com/halllllll/loilo_gluttony/v2/storage"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
 )
 
@@ -39,14 +40,16 @@ type Notify interface {
 type DesktopNotify struct{}
 
 func (d DesktopNotify) ShowNotify(title, message string) {
-	img, _ := notifyImg.Open("notify.png")
-	fileInfo, _ := img.Stat()
-	beeep.Notify(title, message, fileInfo.Name())
+	// img, _ := notifyImg.Open("./notify.png")
+	// fileInfo, _ := img.Stat() file basename
+	beeep.Notify(title, message, "./notify.png")
 }
 
 func init() {
 	// 最低限プログラムを走らせることができるか確認 and 準備
-	proj = setup.NewProject()
+	unityExcel := storage.NewUnityExcel()
+	proj = setup.NewProject(unityExcel)
+
 	utils.LoggingSetting(proj.LogFileName)
 	if data, err := proj.Hello(&LoginInfo); err != nil {
 		utils.ErrLog.Println(red.Sprintln("CANT START PROJECT."))
@@ -58,7 +61,6 @@ func init() {
 	}
 	DesktopNotify{}.ShowNotify("BIG LOVE", "START")
 	utils.StdLog.Println("save folder: ", proj.SaveDirRoot)
-
 	// ほかにも必要なファイルとか構造体は先に生成したり参照できるようにしとくといい気がする
 }
 
@@ -76,7 +78,6 @@ func main() {
 	}()
 
 	// 並行　メニュー
-	// TODO
 
 	for _, record := range *loginRecords {
 		wg.Add(1)
@@ -90,14 +91,8 @@ func main() {
 			}
 			utils.StdLog.Println(green.Sprintf("%s - START", agent.SchoolInfo.Name))
 
-			saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
-			if err != nil {
-				errCh <- fmt.Errorf("failed create save dir for %s - %s", agent.SchoolInfo.Name, err)
-				return
-			}
-
 			// download standard xlsx, export 「生徒一覧」 and 「先生一覧」
-			basicExportExcel(agent, saveDir, errCh)
+			basicExportExcel(agent, proj, errCh)
 
 		}(record)
 
@@ -113,14 +108,27 @@ func main() {
 			utils.InfoLog.Println(yellow.Sprintf("%d --- %s(%s)", idx+1, r.SchoolName, r.SchoolId))
 		}
 	}
+
+	// integrate each sheet
+	// 正常終了はos.Exitするんでdeferは通用しない
+	proj.Storage.DeleteDefaultSheet()
+	proj.Storage.Flush()
+	proj.Storage.Save(proj.SaveDirRoot)
+	proj.Storage.Close()
+
 	DesktopNotify{}.ShowNotify("BIG LOVE", "OVER!!!!!!!")
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
 	os.Exit(1)
 }
 
-func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, errCh chan error) {
+func basicExportExcel(agent *scrape.ScrapeAgent, proj *setup.Project, errCh chan error) {
 	internalId := agent.SchoolInfo.InternalSchoolId
+	saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
+	if err != nil {
+		errCh <- fmt.Errorf("failed create save dir for %s - %s", agent.SchoolInfo.Name, err)
+		return
+	}
 
 	// ONE
 	type studentExcelResult struct {
@@ -132,13 +140,22 @@ func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, errCh chan erro
 	go func(ch chan<- studentExcelResult) {
 		studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
 		err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile)
+		if err != nil {
+			ch <- studentExcelResult{err}
+			return
+		}
+		if err = proj.Storage.AppendSSW(studentFile, agent.SchoolInfo.Name); err != nil {
+			errCh <- err
+		}
+
 		ch <- studentExcelResult{err}
 
 	}(studentChan)
 
 	// TWO
 	type teacherExcelResult struct {
-		err error
+		saveFilePath string
+		err          error
 	}
 	teacherChan := make(chan teacherExcelResult)
 	defer close(teacherChan)
@@ -146,7 +163,16 @@ func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, errCh chan erro
 	go func(ch chan<- teacherExcelResult) {
 		teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
 		err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile)
-		ch <- teacherExcelResult{err}
+		if err != nil {
+			ch <- teacherExcelResult{saveFilePath: "", err: err}
+			return
+		}
+		if err = proj.Storage.AppendTSW(teacherFile, agent.SchoolInfo.Name); err != nil {
+			errCh <- err
+		}
+
+		ch <- teacherExcelResult{saveFilePath: teacherFile, err: err}
+
 	}(teacherChan)
 
 	for i := 0; i < 2; i++ {
@@ -154,35 +180,13 @@ func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, errCh chan erro
 		case stu := <-studentChan:
 			if stu.err != nil {
 				errCh <- stu.err
+				break
 			}
 		case tch := <-teacherChan:
 			if tch.err != nil {
 				errCh <- tch.err
+				break
 			}
 		}
-	}
-
-}
-
-func touchTest(agent *scrape.ScrapeAgent, saveDir string, subWg *sync.WaitGroup, url string) {
-	subWg.Add(1)
-	{
-		go func() {
-			defer subWg.Done()
-			// ahahaha~
-			if err := agent.DownloadAsStaticHTML(saveDir, url); err != nil {
-				return
-			}
-		}()
-	}
-}
-
-func readLocalHtmlFile(agent *scrape.ScrapeAgent, targetPath string, subWg *sync.WaitGroup) {
-	subWg.Add(1)
-	{
-		go func() {
-			defer subWg.Done()
-			agent.ParseStaticHTML(targetPath)
-		}()
 	}
 }

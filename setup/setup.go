@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gocarina/gocsv"
+	"github.com/halllllll/loilo_gluttony/v2/storage"
 	"github.com/halllllll/loilo_gluttony/v2/utils"
 
 	"github.com/spkg/bom"
@@ -27,13 +28,15 @@ type Project struct {
 	DataFileName string
 	LogFileName  string
 	SaveDirRoot  string
+	Storage      *storage.UnityExcel
 }
 
-func NewProject() *Project {
+func NewProject(s *storage.UnityExcel) *Project {
 	return &Project{
 		DataDirName:  dataDirName,
 		DataFileName: dataFileName,
 		LogFileName:  logFileName,
+		Storage:      s,
 	}
 }
 
