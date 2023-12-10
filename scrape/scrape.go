@@ -3,7 +3,11 @@ package scrape
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gocolly/colly"
@@ -121,24 +125,58 @@ func (agent *ScrapeAgent) SaveContent(url, filePath string) error {
 }
 
 // this is only for IN-DEV func
-func (agent *ScrapeAgent) TouchSample(url string) {
+// save html file
+func (agent *ScrapeAgent) DownloadAsStaticHTML(saveDir string, url string) error {
 	c := *agent.Collector.Clone()
 
-	c.OnResponse(func(r *colly.Response) {
-		fmt.Println(string(r.Body))
+	// this is a only sample
+	c.OnHTML("#app-props", func(e *colly.HTMLElement) {
+		ioutil.WriteFile(filepath.Join(saveDir, "response.html"), e.Response.Body, os.ModePerm)
 	})
 
-	// c.OnHTML("#app-props", func(e *colly.HTMLElement) {
-	// 	data := e.Attr("data-props")
-	// 	if err := json.Unmarshal([]byte(data), &props); err != nil {
-	// 		errMsg += fmt.Sprintf("unmarshall error:\n%s\n", err)
-	// 		return
-	// 	}
-	// })
-
-	c.Wait()
 	if err := c.Visit(url); err != nil {
-		fmt.Println()
+		panic(err)
 	}
 	c.Wait()
+	return nil
+}
+
+// this is only for IN-DEV func
+// parse (local) static html file
+func (agent *ScrapeAgent) ParseStaticHTML(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("not exist file %s - %w", path, err)
+	}
+	// t := &http.Transport{}
+	// t.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
+
+	// c := *agent.Collector.Clone()
+	// c.SetRequestTimeout(10 * time.Second)
+	// c.WithTransport(t)
+
+	// // here your code...
+	// c.OnResponse(func(r *colly.Response) {
+	// 	fmt.Println("yay!")
+	// 	fmt.Println(string(r.Body))
+	// })
+
+	// fmt.Println("reading static html file...")
+	// if err := c.Visit(filepath.Join("file://", path)); err != nil {
+	// 	return fmt.Errorf("%w", err)
+	// }
+	fs := http.FileServer(http.Dir(path))
+	http.Handle("/", fs)
+	port := "5963"
+	err := http.ListenAndServe(":"+port, nil)
+	if err != nil {
+		panic(err)
+	}
+	c := *agent.Collector.Clone()
+
+	if err := c.Visit("http://localhost:5963"); err != nil {
+		panic(err)
+	}
+
+	c.Wait()
+	return nil
 }

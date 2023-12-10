@@ -96,44 +96,19 @@ func main() {
 				return
 			}
 
-			internalId := agent.SchoolInfo.InternalSchoolId
-
-			// TODO: SHOULD BE MATOMO BRAIN
 			var subWg sync.WaitGroup
-			subWg.Add(2)
-			{
-				// ONE
-				go func() {
-					defer subWg.Done()
-					studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
-					if err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile); err != nil {
-						errCh <- fmt.Errorf("failed saving STUDENT content on %s - %w", agent.SchoolInfo.Name, err)
-						return
-					}
-				}()
-				// TWO
-				go func() {
-					defer subWg.Done()
-					teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
-					if err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile); err != nil {
-						errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
-						return
-					}
-				}()
-			}
-		}(record)
+			// download standard xlsx, export 「生徒一覧」 and 「先生一覧」
+			basicExportExcel(agent, saveDir, &subWg, errCh)
 
-		// output classes props info (test)
-		// agent.GenClassesInfo()
-		// agent.GetClassInfoById()
+		}(record)
 
 	}
 
 	wg.Wait()
 	// ごちゃごちゃしているが、ログインできた率とできなかった情報を出しているだけ
-	utils.InfoLog.Printf("login successed -  %d/%d (%f)", len(failedLoginRecords), len(*loginRecords),
-		float64(float64(len(failedLoginRecords))/float64(len(*loginRecords))))
-	if len(*loginRecords) != len(failedLoginRecords) {
+	utils.InfoLog.Printf("login successed -  %d/%d (%f)", len(*loginRecords)-len(failedLoginRecords), len(*loginRecords),
+		float64(float64(len(*loginRecords)-len(failedLoginRecords))/float64(len(*loginRecords)))*100)
+	if len(failedLoginRecords) > 0 {
 		utils.InfoLog.Println(yellow.Sprintln("PLEASE CHECK CAN'T LOGIN SCHOOL INFORMATION"))
 		for idx, r := range failedLoginRecords {
 			utils.InfoLog.Println(yellow.Sprintf("%d --- %s(%s)", idx+1, r.SchoolName, r.SchoolId))
@@ -143,4 +118,55 @@ func main() {
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")
 	bufio.NewScanner(os.Stdin).Scan()
 	os.Exit(1)
+}
+
+func basicExportExcel(agent *scrape.ScrapeAgent, saveDir string, subWg *sync.WaitGroup, errCh chan error) {
+	internalId := agent.SchoolInfo.InternalSchoolId
+	subWg.Add(2)
+
+	// TODO: SHOULD BE MATOMO BRAIN
+	{
+		// ONE
+		go func() {
+			defer subWg.Done()
+			studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
+			if err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile); err != nil {
+				errCh <- fmt.Errorf("failed saving STUDENT content on %s - %w", agent.SchoolInfo.Name, err)
+				return
+			}
+		}()
+		// TWO
+		go func() {
+			defer subWg.Done()
+			teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
+			if err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile); err != nil {
+				errCh <- fmt.Errorf("failed saving TEACHER content on %s - %w", agent.SchoolInfo.Name, err)
+				return
+			}
+		}()
+	}
+
+}
+
+func touchTest(agent *scrape.ScrapeAgent, saveDir string, subWg *sync.WaitGroup, url string) {
+	subWg.Add(1)
+	{
+		go func() {
+			defer subWg.Done()
+			// ahahaha~
+			if err := agent.DownloadAsStaticHTML(saveDir, url); err != nil {
+				return
+			}
+		}()
+	}
+}
+
+func readLocalHtmlFile(agent *scrape.ScrapeAgent, targetPath string, subWg *sync.WaitGroup) {
+	subWg.Add(1)
+	{
+		go func() {
+			defer subWg.Done()
+			agent.ParseStaticHTML(targetPath)
+		}()
+	}
 }

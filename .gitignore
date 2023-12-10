@@ -9,3 +9,4 @@ sandbox*
 *.code-workspace
 *.test
 .DS_Store
+.tool-versions
