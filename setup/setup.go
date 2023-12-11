@@ -42,14 +42,7 @@ func NewProject(s *storage.UnityExcel) *Project {
 
 // ファイルの確認・中身の返却と保存用フォルダの作成
 func (proj *Project) Hello(vd *embed.FS) (*[]LoginRecord, error) {
-	cd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("erro get wd - %w", err)
-	}
 	target := filepath.ToSlash(filepath.Join(proj.DataDirName, proj.DataFileName))
-	if _, err := os.Stat(target); err != nil {
-		return nil, fmt.Errorf("file not found - %w", err)
-	}
 	buf, err := vd.ReadFile(target)
 	if err != nil {
 		return nil, fmt.Errorf("error read file %w", err)
@@ -60,7 +53,7 @@ func (proj *Project) Hello(vd *embed.FS) (*[]LoginRecord, error) {
 		return nil, fmt.Errorf("error read csv - %w", err)
 	}
 
-	saveTo, err := CreateDirectory(filepath.Join(cd, ct()))
+	saveTo, err := CreateDirectory(filepath.Join(ct()))
 	if err != nil {
 		return nil, fmt.Errorf("error create save dir - %w", err)
 	}

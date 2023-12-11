@@ -40,9 +40,11 @@ type Notify interface {
 type DesktopNotify struct{}
 
 func (d DesktopNotify) ShowNotify(title, message string) {
-	// img, _ := notifyImg.Open("./notify.png")
-	// fileInfo, _ := img.Stat() file basename
-	beeep.Notify(title, message, "./notify.png")
+	img, _ := notifyImg.ReadFile("notify.png")
+	tmpFile, _ := os.CreateTemp("", "notify-*.png")
+	defer tmpFile.Close()
+	_, _ = tmpFile.Write(img)
+	beeep.Notify(title, message, tmpFile.Name())
 }
 
 func init() {
