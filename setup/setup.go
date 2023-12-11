@@ -52,8 +52,8 @@ func (proj *Project) Hello(vd *embed.FS) (*[]LoginRecord, error) {
 	if err := gocsv.UnmarshalBytes(bom.Clean(buf), &loginrecords); err != nil {
 		return nil, fmt.Errorf("error read csv - %w", err)
 	}
-
-	saveTo, err := CreateDirectory(filepath.Join(ct()))
+	dir, err := os.Getwd()
+	saveTo, err := CreateDirectory(filepath.Join(dir, ct()))
 	if err != nil {
 		return nil, fmt.Errorf("error create save dir - %w", err)
 	}
