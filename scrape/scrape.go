@@ -40,11 +40,11 @@ func Login(loginInfo *setup.LoginRecord) (*ScrapeAgent, error) {
 	c.Limit(&colly.LimitRule{
 		RandomDelay: 3 * time.Second,
 	})
-	enter := &toEnterInfo{
+	enter := &EnterInfo{
 		collector: c,
 		record:    loginInfo,
 	}
-	agent, nil := enter.knock("管理者メニュー")
+	agent, nil := enter.Knock("管理者メニュー")
 
 	return agent, nil
 }

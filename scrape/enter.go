@@ -12,14 +12,14 @@ import (
 	"github.com/halllllll/loilo_gluttony/v2/utils"
 )
 
-type toEnterInfo struct {
+type EnterInfo struct {
 	collector *colly.Collector
 	record    *setup.LoginRecord
 }
 
 // 2023/06/09
 // landMarkText := "管理者メニュー"
-func (info *toEnterInfo) knock(landMarkText string) (*ScrapeAgent, error) {
+func (info *EnterInfo) Knock(landMarkText string) (*ScrapeAgent, error) {
 	var success bool = false
 	c := info.collector
 	school := &loilo.SchoolInfo{

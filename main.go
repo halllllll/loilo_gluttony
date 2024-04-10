@@ -128,7 +128,7 @@ func basicExportExcel(agent *scrape.ScrapeAgent, proj *setup.Project, errCh chan
 	internalId := agent.SchoolInfo.InternalSchoolId
 	saveDir, err := setup.CreateDirectory(filepath.Join(proj.SaveDirRoot, agent.SchoolInfo.Name))
 	if err != nil {
-		errCh <- fmt.Errorf("failed create save dir for %s - %s", agent.SchoolInfo.Name, err)
+		errCh <- fmt.Errorf("failed create save dir for %s - %w", agent.SchoolInfo.Name, err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func basicExportExcel(agent *scrape.ScrapeAgent, proj *setup.Project, errCh chan
 		studentFile := filepath.Join(saveDir, fmt.Sprintf("%s__students.xlsx", agent.SchoolInfo.Name))
 		err := agent.SaveContent(loilo.GenStudentExelUrl(internalId), studentFile)
 		if err != nil {
-			ch <- studentExcelResult{err}
+			ch <- studentExcelResult{err: fmt.Errorf("failed save content - %w", err)}
 			return
 		}
 		if err = proj.Storage.AppendSSW(studentFile, agent.SchoolInfo.Name); err != nil {
@@ -166,7 +166,7 @@ func basicExportExcel(agent *scrape.ScrapeAgent, proj *setup.Project, errCh chan
 		teacherFile := filepath.Join(saveDir, fmt.Sprintf("%s__teacherss.xlsx", agent.SchoolInfo.Name))
 		err := agent.SaveContent(loilo.GenTeacherExelUrl(internalId), teacherFile)
 		if err != nil {
-			ch <- teacherExcelResult{saveFilePath: "", err: err}
+			ch <- teacherExcelResult{saveFilePath: "", err: fmt.Errorf("failed error content - %w", err)}
 			return
 		}
 		if err = proj.Storage.AppendTSW(teacherFile, agent.SchoolInfo.Name); err != nil {
