@@ -10,9 +10,13 @@ var (
 	Home    = fmt.Sprintf("%s/dashboard", Host)
 	classes = func() string { return fmt.Sprintf("%s/user_groups", Host) }
 	// graduates    = fmt.Sprintf("%s/students?graduated=1", host)
-	studentsXlsx = func(id int) string { return fmt.Sprintf("%s/schools/%d/students.xlsx", Host, id) }
-	teachersXlsx = func(id int) string { return fmt.Sprintf("%s/schools/%d/teachers.xlsx", Host, id) }
-	class        = func(id int) string { return fmt.Sprintf("%s/user_groups/%d/memberships", Host, id) }
+	studentsXlsx = func(id int) string {
+		return fmt.Sprintf("%s/console/api/students/export_xlsx?scope=current&school_id=%d&by_query=", Host, id)
+	}
+	teachersXlsx = func(id int) string {
+		return fmt.Sprintf("%s/console/api/teachers/export_xlsx?scope=current&school_id=%d&by_query=", Host, id)
+	}
+	class = func(id int) string { return fmt.Sprintf("%s/user_groups/%d/memberships", Host, id) }
 )
 
 type SchoolInfo struct {
