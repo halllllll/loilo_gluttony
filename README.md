@@ -15,5 +15,5 @@ I have determined that according to robots.txt, this method of scraping is not c
 
 build ex:
 ```
-GOOS=windows GOARCH=386 go build main.go
+GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -trimpath -o loilo_gluttony.exe main.go
 ```
