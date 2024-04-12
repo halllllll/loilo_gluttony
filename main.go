@@ -2,14 +2,17 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	color "github.com/fatih/color"
 	"github.com/gen2brain/beeep"
+	"github.com/halllllll/loilo_gluttony/v2/db"
 	"github.com/halllllll/loilo_gluttony/v2/loilo"
 	"github.com/halllllll/loilo_gluttony/v2/scrape"
 	"github.com/halllllll/loilo_gluttony/v2/setup"
@@ -67,6 +70,7 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
 
 	var wg sync.WaitGroup
 	failedLoginRecords := make([]setup.LoginRecord, 0)
@@ -117,6 +121,29 @@ func main() {
 	proj.Storage.Flush()
 	proj.Storage.Save(proj.SaveDirRoot)
 	proj.Storage.Close()
+
+	fmt.Print("continue? (Y/n) > ")
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		scanner.Scan()
+		in := strings.ToLower(scanner.Text())
+		if in == "y" {
+			// save as db
+			loilodb, closefunc, err := db.CreateDB(ctx, proj)
+			if err != nil {
+				closefunc()
+				utils.ErrLog.Println(fmt.Errorf("%w", err))
+			}
+			defer closefunc()
+			if err := loilodb.SetStudentDB(ctx); err != nil {
+				utils.ErrLog.Println(err)
+			}
+			if err := loilodb.SetTeacherDB(ctx); err != nil {
+				utils.ErrLog.Println(err)
+			}
+		}
+		break
+	}
 
 	DesktopNotify{}.ShowNotify("BIG LOVE", "OVER!!!!!!!")
 	utils.StdLog.Println("FINISH! byebyeﾉｼ")

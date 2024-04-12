@@ -25,8 +25,8 @@ var sheetName = "sheet"
 // excelのデフォルト（破壊）
 var defaultSheetName = "Sheet1"
 
-var studentWorkBookName = "student_all.xlsx"
-var teacherWorkBookName = "teacher_all.xlsx"
+var StudentWorkBookName = "student_all.xlsx"
+var TeacherWorkBookName = "teacher_all.xlsx"
 
 func NewUnityExcel() *UnityExcel {
 	// prepare integrated-excel-file
@@ -95,11 +95,11 @@ func (s *UnityExcel) DeleteDefaultSheet() {
 
 func (s *UnityExcel) Save(path string) {
 
-	if err := s.studentUnityExcel.SaveAs(filepath.Join(path, studentWorkBookName)); err != nil {
+	if err := s.studentUnityExcel.SaveAs(filepath.Join(path, StudentWorkBookName)); err != nil {
 		utils.ErrLog.Fatal(err)
 	}
 
-	if err := s.teacherUnityExcel.SaveAs(filepath.Join(path, teacherWorkBookName)); err != nil {
+	if err := s.teacherUnityExcel.SaveAs(filepath.Join(path, TeacherWorkBookName)); err != nil {
 		utils.ErrLog.Fatal(err)
 	}
 
