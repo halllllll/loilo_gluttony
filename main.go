@@ -71,7 +71,7 @@ func init() {
 
 func main() {
 	ctx := context.Background()
-
+	
 	var wg sync.WaitGroup
 	failedLoginRecords := make([]setup.LoginRecord, 0)
 
@@ -122,7 +122,7 @@ func main() {
 	proj.Storage.Save(proj.SaveDirRoot)
 	proj.Storage.Close()
 
-	fmt.Print("continue? (Y/n) > ")
+	fmt.Print("with server mode? (Y/n) > ")
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		scanner.Scan()

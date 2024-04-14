@@ -1,18 +1,18 @@
 module github.com/halllllll/loilo_gluttony/v2
 
-go 1.20
+go 1.21.6
 
 require (
 	github.com/fatih/color v1.15.0
 	github.com/gen2brain/beeep v0.0.0-20230602101333-f384c29b62dd
 	github.com/gocarina/gocsv v0.0.0-20230513223533-9ddd7fd60602
 	github.com/gocolly/colly v1.2.0
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/spkg/bom v1.0.0
 	github.com/xuri/excelize/v2 v2.8.0
 )
 
 require (
-	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
